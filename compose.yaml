@@ -1,0 +1,58 @@
+name: traceable-rag-agent
+
+x-rag-environment: &rag-environment
+  RAG_DATA_DIR: /data
+  RAG_HOST: 0.0.0.0
+  RAG_PORT: 8080
+  RAG_INLINE_JOBS: "false"
+  RAG_EMBEDDING_PROVIDER: ${RAG_EMBEDDING_PROVIDER:-openai}
+  RAG_EMBEDDING_BASE_URL: ${RAG_EMBEDDING_BASE_URL:-http://model-runner.docker.internal/engines/llama.cpp/v1}
+  RAG_EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-ai/qwen3-embedding:0.6B-F16}
+  RAG_EMBEDDING_DIMENSIONS: ${RAG_EMBEDDING_DIMENSIONS:-1024}
+  RAG_RERANK_PROVIDER: ${RAG_RERANK_PROVIDER:-http}
+  RAG_RERANK_ENDPOINT: ${RAG_RERANK_ENDPOINT:-http://model-runner.docker.internal/rerank}
+  RAG_RERANK_MODEL: ${RAG_RERANK_MODEL:-ai/qwen3-reranker:0.6B}
+  RAG_LLM_ENABLED: ${RAG_LLM_ENABLED:-false}
+  RAG_LLM_BASE_URL: ${RAG_LLM_BASE_URL:-https://api.deepseek.com}
+  RAG_LLM_MODEL: ${RAG_LLM_MODEL:-deepseek-v4-flash}
+  RAG_LLM_API_KEY: ${RAG_LLM_API_KEY:-}
+
+services:
+  api:
+    build:
+      context: .
+    image: traceable-rag-agent:local
+    environment: *rag-environment
+    ports:
+      - "127.0.0.1:${RAG_PORT:-8080}:8080"
+    volumes:
+      - rag-data:/data
+    restart: unless-stopped
+
+  worker:
+    image: traceable-rag-agent:local
+    environment: *rag-environment
+    command: ["ragagent-worker"]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import sqlite3; from ragagent.config import get_settings;
+          connection = sqlite3.connect(get_settings().database_path, timeout=2);
+          connection.execute('SELECT 1').fetchone(); connection.close()
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 6
+    volumes:
+      - rag-data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  rag-data:
+    name: traceable-rag-agent-data

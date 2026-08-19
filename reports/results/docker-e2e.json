@@ -1,0 +1,134 @@
+{
+  "generated_at": "2026-08-19T05:34:37.042227+00:00",
+  "base_url": "http://127.0.0.1:8080",
+  "status": "passed",
+  "health": {
+    "status": "ok",
+    "version": "0.1.0",
+    "providers": {
+      "embedding": "openai",
+      "rerank": "http",
+      "llm": "deepseek-v4-flash"
+    }
+  },
+  "openapi_route_count": 12,
+  "knowledge_base_id": "kb_0lS_4kipaIRs",
+  "document_id": "doc_-Cr_a5CJVdzq",
+  "index_version_id": "idx_sMn-pM4NT4pY",
+  "parse_job": {
+    "status": "succeeded",
+    "trace_stages": [
+      "queued",
+      "starting",
+      "parsing",
+      "completed"
+    ],
+    "result": {
+      "document_id": "doc_-Cr_a5CJVdzq",
+      "sections": 3,
+      "characters": 127,
+      "parser": "md",
+      "latency_ms": 7.405
+    }
+  },
+  "index_job": {
+    "status": "succeeded",
+    "trace_stages": [
+      "queued",
+      "starting",
+      "chunking",
+      "embedding",
+      "persisting",
+      "completed"
+    ],
+    "result": {
+      "index_version_id": "idx_sMn-pM4NT4pY",
+      "documents": 1,
+      "chunks": 3,
+      "active": true,
+      "chunker": "structure_v1",
+      "embedding_provider": "openai",
+      "embedding_model": "ai/qwen3-embedding:0.6B-F16",
+      "embedding_dimensions": 1024,
+      "last_embedding_retry_count": 0,
+      "latency_ms": 1661.293
+    }
+  },
+  "single_query": {
+    "route": "single_pass_rag",
+    "rounds": 1,
+    "latency_ms": 4293.645252000715,
+    "citation_count": 1,
+    "trace_stages": [
+      "query_received",
+      "retrieval_round",
+      "evidence_gate",
+      "context_selection",
+      "answer_generation",
+      "run_completed"
+    ]
+  },
+  "two_concurrent_queries": {
+    "routes": [
+      "single_pass_rag",
+      "single_pass_rag"
+    ],
+    "latencies_ms": [
+      1483.852334000403,
+      1509.460000001127
+    ],
+    "mean_latency_ms": 1496.656167000765,
+    "max_latency_ms": 1509.460000001127,
+    "under_5_seconds": true
+  },
+  "evaluation_job": {
+    "status": "succeeded",
+    "trace_stages": [
+      "queued",
+      "starting",
+      "evaluating",
+      "evaluating",
+      "completed"
+    ]
+  },
+  "evaluation": {
+    "id": "eval_KiifDeaKzvc_",
+    "knowledge_base_id": "kb_0lS_4kipaIRs",
+    "name": "docker-smoke-evaluation",
+    "status": "succeeded",
+    "metrics": {
+      "examples": 2,
+      "evidence_hit_rate": 1.0,
+      "answerability_accuracy": 1.0,
+      "mean_latency_ms": 2241.5495429995644
+    },
+    "examples": [
+      {
+        "question": "员工年假有多少天？",
+        "expected_answer": "十二天",
+        "expected_document_ids": [
+          "doc_-Cr_a5CJVdzq"
+        ],
+        "answerable": true,
+        "run_id": "run_U6oudRu_OGHb",
+        "route": "single_pass_rag",
+        "evidence_hit": true,
+        "predicted_answerable": true,
+        "latency_ms": 1643.6077100006514
+      },
+      {
+        "question": "文档中火星基地的负责人是谁？",
+        "expected_answer": null,
+        "expected_document_ids": [],
+        "answerable": false,
+        "run_id": "run_w8p1WuSUb9GY",
+        "route": "insufficient_evidence",
+        "evidence_hit": true,
+        "predicted_answerable": false,
+        "latency_ms": 2839.4913759984775
+      }
+    ],
+    "created_at": "2026-08-19T05:34:31.941880+00:00",
+    "completed_at": "2026-08-19T05:34:36.724334+00:00"
+  }
+}

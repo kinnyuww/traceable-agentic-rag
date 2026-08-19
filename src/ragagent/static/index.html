@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="本地、可追踪的 Agentic RAG 应用" />
+    <title>Traceable RAG</title>
+    <link rel="stylesheet" href="./styles.css?v=0.1.2" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">TR</div>
+          <div>
+            <strong>Traceable RAG</strong>
+            <span>Local Agent · v0.1</span>
+          </div>
+        </div>
+
+        <button class="primary full" id="new-kb-button" type="button">＋ 新建知识库</button>
+        <div class="sidebar-label">知识库</div>
+        <div id="kb-list" class="kb-list" aria-live="polite"></div>
+
+        <div class="sidebar-footer">
+          <span class="status-dot" id="health-dot"></span>
+          <span id="health-label">正在连接本地服务…</span>
+          <a href="/docs" target="_blank" rel="noreferrer">API</a>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">KNOWLEDGE WORKSPACE</p>
+            <h1 id="workspace-title">选择或创建知识库</h1>
+          </div>
+          <div class="index-pill" id="index-pill">
+            <span class="status-dot"></span>
+            <span>尚无活动索引</span>
+          </div>
+        </header>
+
+        <section id="empty-state" class="empty-state">
+          <div class="empty-visual">
+            <div class="orbit orbit-one"></div>
+            <div class="orbit orbit-two"></div>
+            <div class="core">R</div>
+          </div>
+          <p class="eyebrow">GROUND EVERY ANSWER</p>
+          <h2>把文档变成可核查的知识 Agent</h2>
+          <p>上传资料、建立混合索引，然后查看每一次检索、重排和 Agent 决策。</p>
+          <button class="primary" id="empty-new-kb" type="button">创建第一个知识库</button>
+        </section>
+
+        <section id="workspace" class="workspace hidden">
+          <nav class="tabs" aria-label="Workspace sections" role="tablist">
+            <button class="tab active" id="tab-button-chat" type="button" role="tab" aria-controls="tab-chat" aria-selected="true" data-tab="chat">问答</button>
+            <button class="tab" id="tab-button-documents" type="button" role="tab" aria-controls="tab-documents" aria-selected="false" tabindex="-1" data-tab="documents">文档与索引</button>
+            <button class="tab" id="tab-button-trace" type="button" role="tab" aria-controls="tab-trace" aria-selected="false" tabindex="-1" data-tab="trace">运行轨迹</button>
+          </nav>
+
+          <section class="panel tab-panel" id="tab-chat" role="tabpanel" aria-labelledby="tab-button-chat">
+            <div id="conversation" class="conversation"></div>
+            <form class="composer" id="query-form">
+              <textarea id="question" rows="2" placeholder="询问当前知识库中的内容…" required></textarea>
+              <div class="composer-actions">
+                <span>回答附带原文引用与完整 trace</span>
+                <button class="primary" type="submit" id="ask-button">发送</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel tab-panel hidden" id="tab-documents" role="tabpanel" aria-labelledby="tab-button-documents">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">INGESTION</p>
+                <h2>文档与索引</h2>
+              </div>
+              <button class="secondary" id="build-index-button" type="button">建立新索引版本</button>
+            </div>
+            <label class="dropzone" id="dropzone" role="button" tabindex="0">
+              <input id="file-input" type="file" multiple accept=".pdf,.docx,.md,.markdown,.txt" />
+              <span class="drop-icon">⇧</span>
+              <strong>拖入 PDF、DOCX、Markdown 或 TXT</strong>
+              <span>文件保存在本地 Docker Volume；默认单文件上限 100 MB</span>
+            </label>
+            <div id="job-banner" class="job-banner hidden"></div>
+            <div id="document-list" class="document-list"></div>
+          </section>
+
+          <section class="panel tab-panel hidden" id="tab-trace" role="tabpanel" aria-labelledby="tab-button-trace">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">OBSERVABILITY</p>
+                <h2>最近一次运行轨迹</h2>
+              </div>
+              <span class="mono muted" id="trace-run-id">尚无 run</span>
+            </div>
+            <div id="trace-summary" class="trace-summary"></div>
+            <div id="trace-timeline" class="timeline empty-copy">完成一次查询后，这里会显示检索候选、融合、重排、证据门和停止理由。</div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="new-kb-dialog">
+      <form id="new-kb-form">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">NEW WORKSPACE</p>
+            <h2>创建知识库</h2>
+          </div>
+          <button class="icon-button" id="close-kb-dialog" type="button" aria-label="关闭">×</button>
+        </div>
+        <label>名称 <span class="required-mark" aria-hidden="true">*</span><input id="kb-name" maxlength="120" placeholder="例如：产品技术文档" autocomplete="off" aria-describedby="kb-name-help" required /></label>
+        <span class="field-help" id="kb-name-help">必填，用于在侧边栏识别这个知识库。</span>
+        <label>说明<textarea id="kb-description" rows="3" maxlength="1000" placeholder="可选：这个知识库收录什么内容"></textarea></label>
+        <div class="dialog-actions">
+          <button class="secondary" id="cancel-kb-dialog" type="button">取消</button>
+          <button class="primary" type="submit" id="create-kb-submit">创建</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./app.js?v=0.1.2"></script>
+  </body>
+</html>

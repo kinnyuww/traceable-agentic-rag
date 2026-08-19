@@ -1,0 +1,3569 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-08-18T20:14:59.771393+00:00",
+  "scope": "fixed-slice diagnostic of the full local pipeline; not an official dataset leaderboard",
+  "environment": {
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "python": "3.12.12",
+    "embedding_provider": "Docker Model Runner / llama.cpp",
+    "embedding_model": "ai/qwen3-embedding:0.6B-F16",
+    "rerank_provider": "Docker Model Runner native /rerank",
+    "rerank_model": "ai/qwen3-reranker:0.6B",
+    "generation_model": "disabled (retrieval-stage diagnostic; no LLM quality claim)",
+    "max_agent_rounds": 2
+  },
+  "inputs": {
+    "qasper": {
+      "path": "/tmp/ragagent-qasper-first.json",
+      "sha256": "2d6f9cd549bb9cc61213ba805ed5440081631791e79eee8cf3f21d926bdfb157"
+    },
+    "multihoprag": {
+      "path": "/tmp/ragagent-multihop-first.json",
+      "sha256": "1e83a37e2ee3449e261e2b17db583e188e000493209ea9731ca9ee4ec74428d8"
+    }
+  },
+  "suites": [
+    {
+      "name": "qasper-validation-fixed-slice",
+      "source": "allenai/qasper validation via Hugging Face datasets-server",
+      "sampling_policy": "first 5 papers returned by datasets-server first-rows; first annotator",
+      "documents": 5,
+      "examples": 14,
+      "answerable_examples": 12,
+      "unanswerable_examples": 2,
+      "index": {
+        "index_version_id": "idx_rblJSLZu26T0",
+        "documents": 5,
+        "chunks": 165,
+        "active": true,
+        "chunker": "structure_v1",
+        "embedding_provider": "openai",
+        "embedding_model": "ai/qwen3-embedding:0.6B-F16",
+        "embedding_dimensions": 1024,
+        "last_embedding_retry_count": 0,
+        "latency_ms": 12777.398
+      },
+      "job_trace": {
+        "parse_jobs_with_four_or_more_events": 5,
+        "parse_jobs": 5,
+        "index_event_stages": [
+          "queued",
+          "starting",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "embedding",
+          "embedding",
+          "embedding",
+          "embedding",
+          "embedding",
+          "embedding",
+          "persisting",
+          "completed"
+        ]
+      },
+      "retrieval_by_stage": {
+        "dense": {
+          "all_evidence_at_10": 1.0,
+          "hit_at_1": 0.75,
+          "hit_at_10": 1.0,
+          "hit_at_3": 0.916667,
+          "hit_at_5": 1.0,
+          "mrr_at_10": 0.836111,
+          "ndcg_at_10": 0.876482,
+          "recall_at_10": 1.0
+        },
+        "sparse": {
+          "all_evidence_at_10": 0.916667,
+          "hit_at_1": 0.666667,
+          "hit_at_10": 0.916667,
+          "hit_at_3": 0.916667,
+          "hit_at_5": 0.916667,
+          "mrr_at_10": 0.777778,
+          "ndcg_at_10": 0.813488,
+          "recall_at_10": 0.916667
+        },
+        "rrf": {
+          "all_evidence_at_10": 0.916667,
+          "hit_at_1": 0.666667,
+          "hit_at_10": 0.916667,
+          "hit_at_3": 0.75,
+          "hit_at_5": 0.916667,
+          "mrr_at_10": 0.75,
+          "ndcg_at_10": 0.791024,
+          "recall_at_10": 0.916667
+        },
+        "rerank": {
+          "all_evidence_at_10": 0.916667,
+          "hit_at_1": 0.75,
+          "hit_at_10": 0.916667,
+          "hit_at_3": 0.916667,
+          "hit_at_5": 0.916667,
+          "mrr_at_10": 0.819444,
+          "ndcg_at_10": 0.844244,
+          "recall_at_10": 0.916667
+        }
+      },
+      "agent": {
+        "answerability_accuracy": 0.642857,
+        "evidence_hit_rate_all_examples": 0.714286,
+        "evidence_hit_rate_answerable": 0.833333,
+        "all_evidence_cited_rate_answerable": 0.833333,
+        "answer_or_citation_contains_gold_rate": 0.142857,
+        "trace_completeness_rate": 1.0,
+        "route_counts": {
+          "insufficient_evidence": 3,
+          "single_pass_rag": 11
+        }
+      },
+      "latency_ms": {
+        "mean": 1634.101,
+        "p50": 1345.225,
+        "p95": 2742.197,
+        "max": 2742.197
+      },
+      "details": [
+        {
+          "sequence": 1,
+          "id": "b6f15fb6279b82e34a5bf4828b7b5ddabfdf1d54",
+          "category": "paper_qa",
+          "question": "which multilingual approaches do they compare with?",
+          "answerable": true,
+          "expected_answer": "BIBREF19 | BIBREF20",
+          "expected_document_keys": [
+            "qasper_1912.01214"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1912.01214",
+              "qasper_1811.00383"
+            ],
+            "sparse": [
+              "qasper_1912.01214",
+              "qasper_1609.00425",
+              "qasper_1811.00383",
+              "qasper_1810.08699",
+              "qasper_1801.05147"
+            ],
+            "rrf": [
+              "qasper_1912.01214",
+              "qasper_1609.00425",
+              "qasper_1811.00383",
+              "qasper_1810.08699"
+            ],
+            "rerank": [
+              "qasper_1912.01214",
+              "qasper_1811.00383"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1912.01214",
+            "qasper_1912.01214",
+            "qasper_1912.01214",
+            "qasper_1811.00383"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1289.44,
+          "trace_complete": true,
+          "run_id": "run_LvuO-fdKcPPW"
+        },
+        {
+          "sequence": 2,
+          "id": "f5e6f43454332e0521a778db0b769481e23e7682",
+          "category": "paper_qa",
+          "question": "what are the pivot-based baselines?",
+          "answerable": true,
+          "expected_answer": "pivoting | pivoting$_{\\rm m}$",
+          "expected_document_keys": [
+            "qasper_1912.01214"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1912.01214",
+              "qasper_1810.08699",
+              "qasper_1811.00383"
+            ],
+            "sparse": [
+              "qasper_1912.01214",
+              "qasper_1609.00425",
+              "qasper_1810.08699",
+              "qasper_1801.05147"
+            ],
+            "rrf": [
+              "qasper_1912.01214",
+              "qasper_1609.00425",
+              "qasper_1810.08699"
+            ],
+            "rerank": [
+              "qasper_1912.01214"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1912.01214",
+            "qasper_1912.01214",
+            "qasper_1912.01214",
+            "qasper_1912.01214"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1318.547,
+          "trace_complete": true,
+          "run_id": "run_fRvjdxI0K4V8"
+        },
+        {
+          "sequence": 3,
+          "id": "9a05a5f4351db75da371f7ac12eb0b03607c4b87",
+          "category": "paper_qa",
+          "question": "which datasets did they experiment with?",
+          "answerable": true,
+          "expected_answer": "Europarl | MultiUN",
+          "expected_document_keys": [
+            "qasper_1912.01214"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1811.00383",
+              "qasper_1810.08699",
+              "qasper_1801.05147",
+              "qasper_1609.00425",
+              "qasper_1912.01214"
+            ],
+            "sparse": [
+              "qasper_1801.05147",
+              "qasper_1912.01214",
+              "qasper_1609.00425",
+              "qasper_1810.08699",
+              "qasper_1811.00383"
+            ],
+            "rrf": [
+              "qasper_1801.05147",
+              "qasper_1811.00383",
+              "qasper_1810.08699",
+              "qasper_1912.01214",
+              "qasper_1609.00425"
+            ],
+            "rerank": [
+              "qasper_1811.00383",
+              "qasper_1912.01214",
+              "qasper_1801.05147",
+              "qasper_1810.08699"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1811.00383",
+            "qasper_1912.01214",
+            "qasper_1801.05147",
+            "qasper_1801.05147"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1345.225,
+          "trace_complete": true,
+          "run_id": "run_JXYNuyNxRYt9"
+        },
+        {
+          "sequence": 4,
+          "id": "5eda469a8a77f028d0c5f1acd296111085614537",
+          "category": "paper_qa",
+          "question": "what language pairs are explored?",
+          "answerable": true,
+          "expected_answer": "De-En, En-Fr, Fr-En, En-Es, Ro-En, En-De, Ar-En, En-Ru",
+          "expected_document_keys": [
+            "qasper_1912.01214"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1912.01214",
+              "qasper_1811.00383",
+              "qasper_1810.08699"
+            ],
+            "sparse": [
+              "qasper_1811.00383",
+              "qasper_1912.01214",
+              "qasper_1609.00425",
+              "qasper_1810.08699"
+            ],
+            "rrf": [
+              "qasper_1811.00383",
+              "qasper_1912.01214",
+              "qasper_1810.08699",
+              "qasper_1609.00425"
+            ],
+            "rerank": [
+              "qasper_1811.00383",
+              "qasper_1810.08699",
+              "qasper_1912.01214"
+            ]
+          },
+          "route": "insufficient_evidence",
+          "rounds": 2,
+          "cited_document_keys": [
+            "qasper_1811.00383",
+            "qasper_1810.08699",
+            "qasper_1811.00383"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 2565.883,
+          "trace_complete": true,
+          "run_id": "run_h0l9oEEFGOzh"
+        },
+        {
+          "sequence": 5,
+          "id": "18c5d366b1da8447b5404eab71f4cc658ba12e6f",
+          "category": "paper_qa",
+          "question": "what ner models were evaluated?",
+          "answerable": true,
+          "expected_answer": "Stanford NER | spaCy 2.0  | recurrent model with a CRF top layer",
+          "expected_document_keys": [
+            "qasper_1810.08699"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1801.05147",
+              "qasper_1810.08699",
+              "qasper_1811.00383",
+              "qasper_1912.01214"
+            ],
+            "sparse": [
+              "qasper_1810.08699",
+              "qasper_1609.00425",
+              "qasper_1801.05147",
+              "qasper_1811.00383"
+            ],
+            "rrf": [
+              "qasper_1810.08699",
+              "qasper_1801.05147",
+              "qasper_1609.00425"
+            ],
+            "rerank": [
+              "qasper_1810.08699",
+              "qasper_1801.05147"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1810.08699",
+            "qasper_1801.05147",
+            "qasper_1801.05147",
+            "qasper_1810.08699"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1234.26,
+          "trace_complete": true,
+          "run_id": "run_ev2rSlipaV09"
+        },
+        {
+          "sequence": 6,
+          "id": "b5e4866f0685299f1d7af267bbcc4afe2aab806f",
+          "category": "paper_qa",
+          "question": "what is the source of the news sentences?",
+          "answerable": true,
+          "expected_answer": "ilur.am",
+          "expected_document_keys": [
+            "qasper_1810.08699"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1810.08699",
+              "qasper_1811.00383",
+              "qasper_1912.01214",
+              "qasper_1609.00425"
+            ],
+            "sparse": [
+              "qasper_1810.08699",
+              "qasper_1609.00425",
+              "qasper_1801.05147",
+              "qasper_1811.00383",
+              "qasper_1912.01214"
+            ],
+            "rrf": [
+              "qasper_1810.08699",
+              "qasper_1811.00383",
+              "qasper_1912.01214",
+              "qasper_1609.00425"
+            ],
+            "rerank": [
+              "qasper_1810.08699",
+              "qasper_1912.01214",
+              "qasper_1811.00383"
+            ]
+          },
+          "route": "insufficient_evidence",
+          "rounds": 2,
+          "cited_document_keys": [
+            "qasper_1810.08699",
+            "qasper_1912.01214",
+            "qasper_1811.00383"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 2714.611,
+          "trace_complete": true,
+          "run_id": "run_tLv3-K1s0oPu"
+        },
+        {
+          "sequence": 7,
+          "id": "1f085b9bb7bfd0d6c8cba1a9d73f08fcf2da7590",
+          "category": "paper_qa",
+          "question": "did they use a crowdsourcing platform for manual annotations?",
+          "answerable": true,
+          "expected_answer": "no",
+          "expected_document_keys": [
+            "qasper_1810.08699"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1801.05147",
+              "qasper_1609.00425",
+              "qasper_1810.08699"
+            ],
+            "sparse": [
+              "qasper_1801.05147",
+              "qasper_1609.00425",
+              "qasper_1810.08699",
+              "qasper_1811.00383"
+            ],
+            "rrf": [
+              "qasper_1801.05147",
+              "qasper_1609.00425"
+            ],
+            "rerank": [
+              "qasper_1801.05147"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1801.05147",
+            "qasper_1801.05147",
+            "qasper_1801.05147",
+            "qasper_1801.05147"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1534.739,
+          "trace_complete": true,
+          "run_id": "run_Oe7b5_NEjbD0"
+        },
+        {
+          "sequence": 8,
+          "id": "b6ae8e10c6a0d34c834f18f66ab730b670fb528c",
+          "category": "paper_qa",
+          "question": "what are the topics pulled from Reddit?",
+          "answerable": true,
+          "expected_answer": "politics, business, science, and AskReddit, and 1000 additional posts from the Reddit frontpage. ",
+          "expected_document_keys": [
+            "qasper_1609.00425"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1609.00425",
+              "qasper_1810.08699"
+            ],
+            "sparse": [
+              "qasper_1609.00425",
+              "qasper_1810.08699"
+            ],
+            "rrf": [
+              "qasper_1609.00425"
+            ],
+            "rerank": [
+              "qasper_1609.00425"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1609.00425",
+            "qasper_1609.00425",
+            "qasper_1609.00425",
+            "qasper_1609.00425"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1404.165,
+          "trace_complete": true,
+          "run_id": "run_k4yHuTB9vlZt"
+        },
+        {
+          "sequence": 9,
+          "id": "a87a009c242d57c51fc94fe312af5e02070f898b",
+          "category": "paper_qa",
+          "question": "What predictive model do they build?",
+          "answerable": true,
+          "expected_answer": "logistic regression models",
+          "expected_document_keys": [
+            "qasper_1609.00425"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1609.00425",
+              "qasper_1811.00383",
+              "qasper_1801.05147",
+              "qasper_1912.01214",
+              "qasper_1810.08699"
+            ],
+            "sparse": [
+              "qasper_1609.00425",
+              "qasper_1810.08699",
+              "qasper_1801.05147",
+              "qasper_1811.00383"
+            ],
+            "rrf": [
+              "qasper_1609.00425",
+              "qasper_1811.00383",
+              "qasper_1801.05147",
+              "qasper_1912.01214",
+              "qasper_1810.08699"
+            ],
+            "rerank": [
+              "qasper_1609.00425"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1609.00425",
+            "qasper_1609.00425",
+            "qasper_1609.00425",
+            "qasper_1609.00425"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1331.042,
+          "trace_complete": true,
+          "run_id": "run_fro_GPWg8U9C"
+        },
+        {
+          "sequence": 10,
+          "id": "ef4dba073d24042f24886580ae77add5326f2130",
+          "category": "paper_qa",
+          "question": "What accuracy does the proposed system achieve?",
+          "answerable": true,
+          "expected_answer": "F1 scores of 85.99 on the DL-PS data,  75.15 on the EC-MT data and 71.53 on the EC-UQ data",
+          "expected_document_keys": [
+            "qasper_1801.05147"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1801.05147",
+              "qasper_1912.01214",
+              "qasper_1609.00425",
+              "qasper_1810.08699",
+              "qasper_1811.00383"
+            ],
+            "sparse": [
+              "qasper_1801.05147",
+              "qasper_1912.01214",
+              "qasper_1609.00425",
+              "qasper_1811.00383"
+            ],
+            "rrf": [
+              "qasper_1801.05147",
+              "qasper_1912.01214",
+              "qasper_1609.00425",
+              "qasper_1811.00383"
+            ],
+            "rerank": [
+              "qasper_1801.05147",
+              "qasper_1912.01214",
+              "qasper_1811.00383",
+              "qasper_1609.00425"
+            ]
+          },
+          "route": "insufficient_evidence",
+          "rounds": 2,
+          "cited_document_keys": [
+            "qasper_1801.05147",
+            "qasper_1801.05147",
+            "qasper_1912.01214"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 2742.197,
+          "trace_complete": true,
+          "run_id": "run_t8g9fmKrpd85"
+        },
+        {
+          "sequence": 11,
+          "id": "2df4a045a9cd7b44874340b6fdf9308d3c55327a",
+          "category": "unanswerable",
+          "question": "What crowdsourcing platform is used?",
+          "answerable": false,
+          "expected_answer": "",
+          "expected_document_keys": [],
+          "stage_orders": {
+            "dense": [
+              "qasper_1609.00425",
+              "qasper_1801.05147",
+              "qasper_1810.08699"
+            ],
+            "sparse": [
+              "qasper_1801.05147",
+              "qasper_1609.00425",
+              "qasper_1811.00383"
+            ],
+            "rrf": [
+              "qasper_1801.05147",
+              "qasper_1609.00425"
+            ],
+            "rerank": [
+              "qasper_1801.05147",
+              "qasper_1609.00425"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1801.05147",
+            "qasper_1801.05147",
+            "qasper_1801.05147",
+            "qasper_1801.05147"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1394.898,
+          "trace_complete": true,
+          "run_id": "run_PKYCUDDwF-Fu"
+        },
+        {
+          "sequence": 12,
+          "id": "a313e98994fc039a82aa2447c411dda92c65a470",
+          "category": "unanswerable",
+          "question": "How do they match words before reordering them?",
+          "answerable": false,
+          "expected_answer": "",
+          "expected_document_keys": [],
+          "stage_orders": {
+            "dense": [
+              "qasper_1811.00383",
+              "qasper_1810.08699",
+              "qasper_1912.01214"
+            ],
+            "sparse": [
+              "qasper_1811.00383",
+              "qasper_1609.00425",
+              "qasper_1810.08699",
+              "qasper_1801.05147",
+              "qasper_1912.01214"
+            ],
+            "rrf": [
+              "qasper_1811.00383",
+              "qasper_1810.08699",
+              "qasper_1609.00425"
+            ],
+            "rerank": [
+              "qasper_1811.00383"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1811.00383",
+            "qasper_1811.00383",
+            "qasper_1811.00383",
+            "qasper_1811.00383"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1263.579,
+          "trace_complete": true,
+          "run_id": "run_4qZTWQcPbkKS"
+        },
+        {
+          "sequence": 13,
+          "id": "37861be6aecd9242c4fdccdfcd06e48f3f1f8f81",
+          "category": "paper_qa",
+          "question": "On how many language pairs do they show that preordering assisting language sentences helps translation quality?",
+          "answerable": true,
+          "expected_answer": "5",
+          "expected_document_keys": [
+            "qasper_1811.00383"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1811.00383",
+              "qasper_1912.01214"
+            ],
+            "sparse": [
+              "qasper_1811.00383",
+              "qasper_1609.00425",
+              "qasper_1912.01214",
+              "qasper_1810.08699"
+            ],
+            "rrf": [
+              "qasper_1811.00383",
+              "qasper_1912.01214"
+            ],
+            "rerank": [
+              "qasper_1811.00383"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1811.00383",
+            "qasper_1811.00383",
+            "qasper_1811.00383",
+            "qasper_1811.00383"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1295.938,
+          "trace_complete": true,
+          "run_id": "run_AA2KfHxLi_fH"
+        },
+        {
+          "sequence": 14,
+          "id": "7e62a53823aba08bc26b2812db016f5ce6159565",
+          "category": "paper_qa",
+          "question": "Which dataset(s) do they experiment with?",
+          "answerable": true,
+          "expected_answer": "IITB English-Hindi parallel corpus BIBREF22 | ILCI English-Hindi parallel corpus",
+          "expected_document_keys": [
+            "qasper_1811.00383"
+          ],
+          "stage_orders": {
+            "dense": [
+              "qasper_1811.00383",
+              "qasper_1810.08699",
+              "qasper_1801.05147",
+              "qasper_1609.00425",
+              "qasper_1912.01214"
+            ],
+            "sparse": [
+              "qasper_1810.08699",
+              "qasper_1609.00425",
+              "qasper_1801.05147"
+            ],
+            "rrf": [
+              "qasper_1609.00425",
+              "qasper_1810.08699",
+              "qasper_1801.05147",
+              "qasper_1811.00383"
+            ],
+            "rerank": [
+              "qasper_1811.00383",
+              "qasper_1801.05147",
+              "qasper_1810.08699"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "qasper_1811.00383",
+            "qasper_1801.05147",
+            "qasper_1801.05147"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1442.894,
+          "trace_complete": true,
+          "run_id": "run_cGR-6MpZRn2C"
+        }
+      ]
+    },
+    {
+      "name": "multihoprag-balanced-passage-slice",
+      "source": "yixuantt/MultiHopRAG train via Hugging Face datasets-server",
+      "sampling_policy": "first 6 rows of each of 4 question types; gold evidence facts as passages; 40 unique evidence facts from the end of first-rows as distractors",
+      "documents": 82,
+      "examples": 24,
+      "answerable_examples": 18,
+      "unanswerable_examples": 6,
+      "index": {
+        "index_version_id": "idx_qXDpDGHkYoZo",
+        "documents": 82,
+        "chunks": 82,
+        "active": true,
+        "chunker": "structure_v1",
+        "embedding_provider": "openai",
+        "embedding_model": "ai/qwen3-embedding:0.6B-F16",
+        "embedding_dimensions": 1024,
+        "last_embedding_retry_count": 0,
+        "latency_ms": 3701.637
+      },
+      "job_trace": {
+        "parse_jobs_with_four_or_more_events": 82,
+        "parse_jobs": 82,
+        "index_event_stages": [
+          "queued",
+          "starting",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "embedding",
+          "embedding",
+          "embedding",
+          "persisting",
+          "completed"
+        ]
+      },
+      "retrieval_by_stage": {
+        "dense": {
+          "all_evidence_at_10": 1.0,
+          "hit_at_1": 0.944444,
+          "hit_at_10": 1.0,
+          "hit_at_3": 1.0,
+          "hit_at_5": 1.0,
+          "mrr_at_10": 0.972222,
+          "ndcg_at_10": 0.941883,
+          "recall_at_10": 1.0
+        },
+        "sparse": {
+          "all_evidence_at_10": 0.888889,
+          "hit_at_1": 0.944444,
+          "hit_at_10": 1.0,
+          "hit_at_3": 1.0,
+          "hit_at_5": 1.0,
+          "mrr_at_10": 0.972222,
+          "ndcg_at_10": 0.910761,
+          "recall_at_10": 0.967593
+        },
+        "rrf": {
+          "all_evidence_at_10": 0.944444,
+          "hit_at_1": 0.944444,
+          "hit_at_10": 1.0,
+          "hit_at_3": 1.0,
+          "hit_at_5": 1.0,
+          "mrr_at_10": 0.972222,
+          "ndcg_at_10": 0.940591,
+          "recall_at_10": 0.981481
+        },
+        "rerank": {
+          "all_evidence_at_10": 0.944444,
+          "hit_at_1": 1.0,
+          "hit_at_10": 1.0,
+          "hit_at_3": 1.0,
+          "hit_at_5": 1.0,
+          "mrr_at_10": 1.0,
+          "ndcg_at_10": 0.973535,
+          "recall_at_10": 0.981481
+        }
+      },
+      "agent": {
+        "answerability_accuracy": 0.958333,
+        "evidence_hit_rate_all_examples": 0.75,
+        "evidence_hit_rate_answerable": 1.0,
+        "all_evidence_cited_rate_answerable": 0.888889,
+        "answer_or_citation_contains_gold_rate": 0.416667,
+        "trace_completeness_rate": 1.0,
+        "route_counts": {
+          "insufficient_evidence": 5,
+          "iterative_rag": 1,
+          "single_pass_rag": 18
+        }
+      },
+      "latency_ms": {
+        "mean": 1845.794,
+        "p50": 1200.804,
+        "p95": 4317.832,
+        "max": 4587.523
+      },
+      "details": [
+        {
+          "sequence": 1,
+          "id": "multihop-row-0",
+          "category": "inference_query",
+          "question": "Who is the individual associated with the cryptocurrency industry facing a criminal trial on fraud and conspiracy charges, as reported by both The Verge and TechCrunch, and is accused by prosecutors of committing fraud for personal gain?",
+          "answerable": true,
+          "expected_answer": "Sam Bankman-Fried",
+          "expected_document_keys": [
+            "multihop_86b7987d94284c48",
+            "multihop_ff855d1ecb8e1f8a",
+            "multihop_c51e57a58828516f"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_52dda7999df75328",
+              "multihop_c51e57a58828516f",
+              "multihop_86b7987d94284c48",
+              "multihop_238545133d430bbd",
+              "multihop_9f135c0d8232d75f",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_b677b8950375efb3",
+              "multihop_cea75b157eb23200",
+              "multihop_696d73b87590c52b",
+              "multihop_98549b9d83b7b842",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_7e03a063de929ec2",
+              "multihop_956e995ea33296ca",
+              "multihop_6491e4e883f430da",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_1f364b546a95caa0",
+              "multihop_9398381aea11337b",
+              "multihop_6c53069505697f92"
+            ],
+            "sparse": [
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_52dda7999df75328",
+              "multihop_c51e57a58828516f",
+              "multihop_86b7987d94284c48",
+              "multihop_7c628f0975c624e5",
+              "multihop_9f135c0d8232d75f",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_26d8adfc64d4804d",
+              "multihop_cea75b157eb23200",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_696d73b87590c52b",
+              "multihop_09484bd341d05f5b",
+              "multihop_467535a0b680b29b",
+              "multihop_8d771a261c08f44b",
+              "multihop_b677b8950375efb3",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_fccc484a245b921b",
+              "multihop_6c53069505697f92",
+              "multihop_12828bab98739ff0",
+              "multihop_bda37e246a290148"
+            ],
+            "rrf": [
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_52dda7999df75328",
+              "multihop_c51e57a58828516f",
+              "multihop_86b7987d94284c48",
+              "multihop_9f135c0d8232d75f",
+              "multihop_cea75b157eb23200",
+              "multihop_696d73b87590c52b",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_b677b8950375efb3",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_6c53069505697f92",
+              "multihop_238545133d430bbd"
+            ],
+            "rerank": [
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_c51e57a58828516f",
+              "multihop_86b7987d94284c48",
+              "multihop_52dda7999df75328",
+              "multihop_238545133d430bbd",
+              "multihop_696d73b87590c52b"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_ff855d1ecb8e1f8a",
+            "multihop_c51e57a58828516f",
+            "multihop_86b7987d94284c48",
+            "multihop_52dda7999df75328"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1236.036,
+          "trace_complete": true,
+          "run_id": "run_A0F1LEdhw4oE"
+        },
+        {
+          "sequence": 2,
+          "id": "multihop-row-1",
+          "category": "inference_query",
+          "question": "Which individual is implicated in both inflating the value of a Manhattan apartment to a figure not yet achieved in New York City's real estate history, according to 'Fortune', and is also accused of adjusting this apartment's valuation to compensate for a loss in another asset's worth, as reported by 'The Age'?",
+          "answerable": true,
+          "expected_answer": "Donald Trump",
+          "expected_document_keys": [
+            "multihop_ad1b968ef37ff1ff",
+            "multihop_7e03a063de929ec2"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_7e03a063de929ec2",
+              "multihop_98549b9d83b7b842",
+              "multihop_9f135c0d8232d75f",
+              "multihop_c51e57a58828516f",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_86b7987d94284c48",
+              "multihop_696d73b87590c52b",
+              "multihop_238545133d430bbd",
+              "multihop_52dda7999df75328",
+              "multihop_b677b8950375efb3",
+              "multihop_9398381aea11337b",
+              "multihop_f74f498875937c9f",
+              "multihop_467535a0b680b29b",
+              "multihop_cea75b157eb23200",
+              "multihop_109c9f6989d66f7c",
+              "multihop_956e995ea33296ca",
+              "multihop_e75c92ca318f0032",
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_6473d6302034b7c8"
+            ],
+            "sparse": [
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_467535a0b680b29b",
+              "multihop_08983717f2933bef",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_7e03a063de929ec2",
+              "multihop_7c628f0975c624e5",
+              "multihop_5fd62b6dc8d82ace",
+              "multihop_12828bab98739ff0",
+              "multihop_f9ad08c803e79304",
+              "multihop_bda37e246a290148",
+              "multihop_b677b8950375efb3",
+              "multihop_98549b9d83b7b842",
+              "multihop_2b7dd26240414f6a",
+              "multihop_6473d6302034b7c8",
+              "multihop_26d8adfc64d4804d",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_fccc484a245b921b",
+              "multihop_238545133d430bbd",
+              "multihop_76b2d765baecc136"
+            ],
+            "rrf": [
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_7e03a063de929ec2",
+              "multihop_98549b9d83b7b842",
+              "multihop_467535a0b680b29b",
+              "multihop_b677b8950375efb3",
+              "multihop_238545133d430bbd",
+              "multihop_6473d6302034b7c8",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_9f135c0d8232d75f",
+              "multihop_08983717f2933bef",
+              "multihop_c51e57a58828516f",
+              "multihop_a368d33a6f3e4bd3"
+            ],
+            "rerank": [
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_7e03a063de929ec2",
+              "multihop_98549b9d83b7b842",
+              "multihop_238545133d430bbd",
+              "multihop_c51e57a58828516f",
+              "multihop_a368d33a6f3e4bd3"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_ad1b968ef37ff1ff",
+            "multihop_7e03a063de929ec2",
+            "multihop_98549b9d83b7b842"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1261.974,
+          "trace_complete": true,
+          "run_id": "run_XrYOHSLCh4C9"
+        },
+        {
+          "sequence": 3,
+          "id": "multihop-row-2",
+          "category": "inference_query",
+          "question": "Who is the figure associated with generative AI technology whose departure from OpenAI was considered shocking according to Fortune, and is also the subject of a prevailing theory suggesting a lack of full truthfulness with the board as reported by TechCrunch?",
+          "answerable": true,
+          "expected_answer": "Sam Altman",
+          "expected_document_keys": [
+            "multihop_7c628f0975c624e5",
+            "multihop_6491e4e883f430da"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_7c628f0975c624e5",
+              "multihop_6491e4e883f430da",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_2b7dd26240414f6a",
+              "multihop_86b7987d94284c48",
+              "multihop_ec1a5621287daf1e",
+              "multihop_c51e57a58828516f",
+              "multihop_238545133d430bbd",
+              "multihop_9398381aea11337b",
+              "multihop_696d73b87590c52b",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_6f541427ab4e6170",
+              "multihop_98549b9d83b7b842",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_6c53069505697f92",
+              "multihop_9f135c0d8232d75f",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_b677b8950375efb3"
+            ],
+            "sparse": [
+              "multihop_7c628f0975c624e5",
+              "multihop_6491e4e883f430da",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_26d8adfc64d4804d",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_6c53069505697f92",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_bda37e246a290148",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_98549b9d83b7b842",
+              "multihop_9f135c0d8232d75f",
+              "multihop_467535a0b680b29b",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_2b7dd26240414f6a",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_9398381aea11337b",
+              "multihop_b677b8950375efb3"
+            ],
+            "rrf": [
+              "multihop_7c628f0975c624e5",
+              "multihop_6491e4e883f430da",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_2b7dd26240414f6a",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_6c53069505697f92",
+              "multihop_98549b9d83b7b842",
+              "multihop_9398381aea11337b",
+              "multihop_9f135c0d8232d75f"
+            ],
+            "rerank": [
+              "multihop_7c628f0975c624e5",
+              "multihop_6491e4e883f430da",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_2b7dd26240414f6a"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_7c628f0975c624e5",
+            "multihop_6491e4e883f430da",
+            "multihop_2187f9eb151d0bdf",
+            "multihop_9f2f1a128c8db5f1"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1183.156,
+          "trace_complete": true,
+          "run_id": "run_qQkCinT6lKUc"
+        },
+        {
+          "sequence": 4,
+          "id": "multihop-row-3",
+          "category": "comparison_query",
+          "question": "Do the TechCrunch article on software companies and the Hacker News article on The Epoch Times both report an increase in revenue related to payment and subscription models, respectively?",
+          "answerable": true,
+          "expected_answer": "Yes",
+          "expected_document_keys": [
+            "multihop_7a4e22f59cb989e9",
+            "multihop_cea75b157eb23200"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_cea75b157eb23200",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_8f96c51f32577315",
+              "multihop_956e995ea33296ca",
+              "multihop_1f364b546a95caa0",
+              "multihop_6491e4e883f430da",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_24940744bb1fb5ab",
+              "multihop_09484bd341d05f5b",
+              "multihop_fe7d21b966d020d3",
+              "multihop_109c9f6989d66f7c",
+              "multihop_12828bab98739ff0",
+              "multihop_41ac170d09a83a85",
+              "multihop_0e9ec29982b19396",
+              "multihop_26d8adfc64d4804d",
+              "multihop_2b7dd26240414f6a",
+              "multihop_c51e57a58828516f",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_f74f498875937c9f",
+              "multihop_b677b8950375efb3"
+            ],
+            "sparse": [
+              "multihop_cea75b157eb23200",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_8f96c51f32577315",
+              "multihop_696d73b87590c52b",
+              "multihop_6c53069505697f92",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_467535a0b680b29b",
+              "multihop_6491e4e883f430da",
+              "multihop_08983717f2933bef",
+              "multihop_da03ae51fd56a40a",
+              "multihop_956e995ea33296ca",
+              "multihop_1f364b546a95caa0",
+              "multihop_ec1a5621287daf1e",
+              "multihop_1f10286355119fad",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_bda37e246a290148",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_820d4900109e0fb3",
+              "multihop_f9ad08c803e79304"
+            ],
+            "rrf": [
+              "multihop_cea75b157eb23200",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_8f96c51f32577315",
+              "multihop_6491e4e883f430da",
+              "multihop_956e995ea33296ca",
+              "multihop_1f364b546a95caa0",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_696d73b87590c52b",
+              "multihop_6c53069505697f92",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_24940744bb1fb5ab"
+            ],
+            "rerank": [
+              "multihop_cea75b157eb23200",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_8f96c51f32577315",
+              "multihop_1f364b546a95caa0",
+              "multihop_956e995ea33296ca",
+              "multihop_6491e4e883f430da"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_cea75b157eb23200",
+            "multihop_7a4e22f59cb989e9",
+            "multihop_8f96c51f32577315"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1058.641,
+          "trace_complete": true,
+          "run_id": "run_ElCQDc-0qKzi"
+        },
+        {
+          "sequence": 5,
+          "id": "multihop-row-4",
+          "category": "inference_query",
+          "question": "Which online betting platform provides a welcome bonus of up to $1000 in bonus bets for new customers' first losses, runs NBA betting promotions, and is anticipated to extend the same sign-up offer to new users in Vermont, as reported by both CBSSports.com and Sporting News?",
+          "answerable": true,
+          "expected_answer": "Caesars Sportsbook",
+          "expected_document_keys": [
+            "multihop_d3f10ef170364481",
+            "multihop_e77d1edaa83deb8e",
+            "multihop_c129cb1312f2c76a"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_c129cb1312f2c76a",
+              "multihop_d3f10ef170364481",
+              "multihop_8b5603417d5aea91",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_87dfa0a87e722b5f",
+              "multihop_96db611fcb1efa56",
+              "multihop_df8045c57c8225cd",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_e75c92ca318f0032",
+              "multihop_f9ad08c803e79304",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_da03ae51fd56a40a",
+              "multihop_956e995ea33296ca",
+              "multihop_36b20d00ab6ed517",
+              "multihop_fe7d21b966d020d3",
+              "multihop_b677b8950375efb3",
+              "multihop_52dda7999df75328",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_cea75b157eb23200",
+              "multihop_467535a0b680b29b"
+            ],
+            "sparse": [
+              "multihop_d3f10ef170364481",
+              "multihop_c129cb1312f2c76a",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_8b5603417d5aea91",
+              "multihop_87dfa0a87e722b5f",
+              "multihop_df8045c57c8225cd",
+              "multihop_207150135fc74e4b",
+              "multihop_813c087ead41138a",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_e75c92ca318f0032",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_467535a0b680b29b",
+              "multihop_f9ad08c803e79304",
+              "multihop_8d771a261c08f44b",
+              "multihop_96db611fcb1efa56",
+              "multihop_f0248675c2ebef3e",
+              "multihop_b99c460b45d6fdad",
+              "multihop_bda37e246a290148",
+              "multihop_08983717f2933bef",
+              "multihop_9676c004b4a2fa64"
+            ],
+            "rrf": [
+              "multihop_c129cb1312f2c76a",
+              "multihop_d3f10ef170364481",
+              "multihop_8b5603417d5aea91",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_87dfa0a87e722b5f",
+              "multihop_df8045c57c8225cd",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_e75c92ca318f0032",
+              "multihop_96db611fcb1efa56",
+              "multihop_f9ad08c803e79304",
+              "multihop_467535a0b680b29b",
+              "multihop_207150135fc74e4b"
+            ],
+            "rerank": [
+              "multihop_c129cb1312f2c76a",
+              "multihop_d3f10ef170364481",
+              "multihop_8b5603417d5aea91",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_87dfa0a87e722b5f",
+              "multihop_df8045c57c8225cd"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_c129cb1312f2c76a",
+            "multihop_d3f10ef170364481",
+            "multihop_8b5603417d5aea91",
+            "multihop_e77d1edaa83deb8e"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1164.872,
+          "trace_complete": true,
+          "run_id": "run_eWMSKANHG9n8"
+        },
+        {
+          "sequence": 6,
+          "id": "multihop-row-5",
+          "category": "inference_query",
+          "question": "Who is the individual alleged to have built a thriving crypto exchange on falsehoods and is accused by the prosecution of committing fraud for personal gain, as reported by both Fortune and TechCrunch?",
+          "answerable": true,
+          "expected_answer": "Sam Bankman-Fried",
+          "expected_document_keys": [
+            "multihop_98549b9d83b7b842",
+            "multihop_c51e57a58828516f"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_c51e57a58828516f",
+              "multihop_52dda7999df75328",
+              "multihop_86b7987d94284c48",
+              "multihop_9f135c0d8232d75f",
+              "multihop_238545133d430bbd",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_98549b9d83b7b842",
+              "multihop_b677b8950375efb3",
+              "multihop_696d73b87590c52b",
+              "multihop_9398381aea11337b",
+              "multihop_7e03a063de929ec2",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_6c53069505697f92",
+              "multihop_6491e4e883f430da",
+              "multihop_7c628f0975c624e5",
+              "multihop_26d8adfc64d4804d",
+              "multihop_cea75b157eb23200",
+              "multihop_956e995ea33296ca"
+            ],
+            "sparse": [
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_c51e57a58828516f",
+              "multihop_7c628f0975c624e5",
+              "multihop_98549b9d83b7b842",
+              "multihop_26d8adfc64d4804d",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_52dda7999df75328",
+              "multihop_6491e4e883f430da",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_7e03a063de929ec2",
+              "multihop_09484bd341d05f5b",
+              "multihop_467535a0b680b29b",
+              "multihop_86b7987d94284c48",
+              "multihop_fccc484a245b921b",
+              "multihop_6c53069505697f92",
+              "multihop_238545133d430bbd",
+              "multihop_9f135c0d8232d75f",
+              "multihop_f0248675c2ebef3e",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_1f364b546a95caa0"
+            ],
+            "rrf": [
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_c51e57a58828516f",
+              "multihop_52dda7999df75328",
+              "multihop_98549b9d83b7b842",
+              "multihop_86b7987d94284c48",
+              "multihop_7c628f0975c624e5",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_9f135c0d8232d75f",
+              "multihop_238545133d430bbd",
+              "multihop_26d8adfc64d4804d",
+              "multihop_7e03a063de929ec2",
+              "multihop_6491e4e883f430da"
+            ],
+            "rerank": [
+              "multihop_c51e57a58828516f",
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_98549b9d83b7b842",
+              "multihop_238545133d430bbd",
+              "multihop_86b7987d94284c48",
+              "multihop_9f135c0d8232d75f"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_c51e57a58828516f",
+            "multihop_ff855d1ecb8e1f8a",
+            "multihop_98549b9d83b7b842",
+            "multihop_238545133d430bbd"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1082.201,
+          "trace_complete": true,
+          "run_id": "run_YOswiqjfn6sy"
+        },
+        {
+          "sequence": 7,
+          "id": "multihop-row-6",
+          "category": "comparison_query",
+          "question": "Does the TechCrunch article on Twitch's subscription revenue split policy indicate a different monetization strategy compared to the TechCrunch article on Beeper's plans for Beeper Mini subscriptions?",
+          "answerable": true,
+          "expected_answer": "Yes",
+          "expected_document_keys": [
+            "multihop_8f96c51f32577315",
+            "multihop_09484bd341d05f5b"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_8f96c51f32577315",
+              "multihop_09484bd341d05f5b",
+              "multihop_cea75b157eb23200",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_1f364b546a95caa0",
+              "multihop_b677b8950375efb3",
+              "multihop_6491e4e883f430da",
+              "multihop_956e995ea33296ca",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_24940744bb1fb5ab",
+              "multihop_c51e57a58828516f",
+              "multihop_7e03a063de929ec2",
+              "multihop_52dda7999df75328",
+              "multihop_26d8adfc64d4804d",
+              "multihop_696d73b87590c52b",
+              "multihop_3ccaf5743c9112e9",
+              "multihop_fe7d21b966d020d3",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_238545133d430bbd"
+            ],
+            "sparse": [
+              "multihop_8f96c51f32577315",
+              "multihop_09484bd341d05f5b",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_cea75b157eb23200",
+              "multihop_238545133d430bbd",
+              "multihop_6f541427ab4e6170",
+              "multihop_e75c92ca318f0032",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_6491e4e883f430da",
+              "multihop_1f364b546a95caa0",
+              "multihop_52dda7999df75328",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_956e995ea33296ca",
+              "multihop_6c53069505697f92",
+              "multihop_bda37e246a290148",
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_24940744bb1fb5ab",
+              "multihop_da03ae51fd56a40a",
+              "multihop_41ac170d09a83a85",
+              "multihop_f39fc075d2ef71a6"
+            ],
+            "rrf": [
+              "multihop_8f96c51f32577315",
+              "multihop_09484bd341d05f5b",
+              "multihop_cea75b157eb23200",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_1f364b546a95caa0",
+              "multihop_6491e4e883f430da",
+              "multihop_956e995ea33296ca",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_238545133d430bbd",
+              "multihop_52dda7999df75328",
+              "multihop_24940744bb1fb5ab",
+              "multihop_a368d33a6f3e4bd3"
+            ],
+            "rerank": [
+              "multihop_8f96c51f32577315",
+              "multihop_09484bd341d05f5b",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_cea75b157eb23200",
+              "multihop_1f364b546a95caa0",
+              "multihop_6491e4e883f430da"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_8f96c51f32577315",
+            "multihop_09484bd341d05f5b",
+            "multihop_7a4e22f59cb989e9"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1055.512,
+          "trace_complete": true,
+          "run_id": "run_TE9WByggQYpZ"
+        },
+        {
+          "sequence": 8,
+          "id": "multihop-row-7",
+          "category": "comparison_query",
+          "question": "Does 'The New York Times' article attribute the success of the Buffalo Bills' defense to the contributions of Jordan Poyer, while the 'Sporting News' article suggests that the Baltimore Ravens' defense needs to improve before their game against the Cincinnati Bengals?",
+          "answerable": true,
+          "expected_answer": "Yes",
+          "expected_document_keys": [
+            "multihop_467535a0b680b29b",
+            "multihop_8d771a261c08f44b"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_8d771a261c08f44b",
+              "multihop_467535a0b680b29b",
+              "multihop_813c087ead41138a",
+              "multihop_bda37e246a290148",
+              "multihop_f9ad08c803e79304",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_820d4900109e0fb3",
+              "multihop_36b20d00ab6ed517",
+              "multihop_e75c92ca318f0032",
+              "multihop_96db611fcb1efa56",
+              "multihop_87dfa0a87e722b5f",
+              "multihop_da03ae51fd56a40a",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_98549b9d83b7b842",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_df8045c57c8225cd",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_238545133d430bbd",
+              "multihop_1f364b546a95caa0",
+              "multihop_08983717f2933bef"
+            ],
+            "sparse": [
+              "multihop_8d771a261c08f44b",
+              "multihop_467535a0b680b29b",
+              "multihop_813c087ead41138a",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_08983717f2933bef",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_e75c92ca318f0032",
+              "multihop_c51e57a58828516f",
+              "multihop_1f364b546a95caa0",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_da03ae51fd56a40a",
+              "multihop_f0248675c2ebef3e",
+              "multihop_c129cb1312f2c76a",
+              "multihop_820d4900109e0fb3",
+              "multihop_df8045c57c8225cd",
+              "multihop_bda37e246a290148",
+              "multihop_c2a64c498cd589e2",
+              "multihop_8b5603417d5aea91",
+              "multihop_87dfa0a87e722b5f",
+              "multihop_36b20d00ab6ed517"
+            ],
+            "rrf": [
+              "multihop_8d771a261c08f44b",
+              "multihop_467535a0b680b29b",
+              "multihop_813c087ead41138a",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_e75c92ca318f0032",
+              "multihop_bda37e246a290148",
+              "multihop_820d4900109e0fb3",
+              "multihop_da03ae51fd56a40a",
+              "multihop_08983717f2933bef",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_36b20d00ab6ed517",
+              "multihop_1f364b546a95caa0"
+            ],
+            "rerank": [
+              "multihop_8d771a261c08f44b",
+              "multihop_467535a0b680b29b",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_813c087ead41138a",
+              "multihop_36b20d00ab6ed517",
+              "multihop_820d4900109e0fb3"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_8d771a261c08f44b",
+            "multihop_467535a0b680b29b",
+            "multihop_5f7d4090f40fd03f"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1149.643,
+          "trace_complete": true,
+          "run_id": "run_LciyfRhPkAYS"
+        },
+        {
+          "sequence": 9,
+          "id": "multihop-row-8",
+          "category": "inference_query",
+          "question": "What is the name of the organization discussed in TechCrunch articles that, despite its financial instability, is recognized for creating ChatGPT, which is both a priority and a platform for ongoing innovations, and is planning to enhance its capabilities with the release of GPT-4 and associated APIs?",
+          "answerable": true,
+          "expected_answer": "OpenAI",
+          "expected_document_keys": [
+            "multihop_2187f9eb151d0bdf",
+            "multihop_d0dc8f2e8b380cb5",
+            "multihop_2b7dd26240414f6a",
+            "multihop_78e5e0acac9fd9de"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_2187f9eb151d0bdf",
+              "multihop_2b7dd26240414f6a",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_6491e4e883f430da",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_7c628f0975c624e5",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_c51e57a58828516f",
+              "multihop_ec1a5621287daf1e",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_6f541427ab4e6170",
+              "multihop_26d8adfc64d4804d",
+              "multihop_6c53069505697f92",
+              "multihop_24940744bb1fb5ab",
+              "multihop_956e995ea33296ca",
+              "multihop_1f364b546a95caa0",
+              "multihop_f74f498875937c9f",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_0e9ec29982b19396"
+            ],
+            "sparse": [
+              "multihop_2b7dd26240414f6a",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_7c628f0975c624e5",
+              "multihop_e75c92ca318f0032",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_ec1a5621287daf1e",
+              "multihop_8f96c51f32577315",
+              "multihop_b99c460b45d6fdad",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_08983717f2933bef",
+              "multihop_467535a0b680b29b",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_f9ad08c803e79304",
+              "multihop_f74f498875937c9f",
+              "multihop_6c53069505697f92",
+              "multihop_41ac170d09a83a85"
+            ],
+            "rrf": [
+              "multihop_2b7dd26240414f6a",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_7c628f0975c624e5",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_ec1a5621287daf1e",
+              "multihop_6c53069505697f92",
+              "multihop_f74f498875937c9f",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_6491e4e883f430da",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_d7f1a0b9d5e73231"
+            ],
+            "rerank": [
+              "multihop_2b7dd26240414f6a",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_ec1a5621287daf1e",
+              "multihop_6491e4e883f430da"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_2b7dd26240414f6a",
+            "multihop_2187f9eb151d0bdf",
+            "multihop_d0dc8f2e8b380cb5",
+            "multihop_78e5e0acac9fd9de"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1230.794,
+          "trace_complete": true,
+          "run_id": "run_OlZJXtpg8Yup"
+        },
+        {
+          "sequence": 10,
+          "id": "multihop-row-10",
+          "category": "null_query",
+          "question": "Considering the information from a BBC article detailing Sridevi's achievements in the Indian film industry and a Times of India report on her posthumous honors, which single character from a film portrayed by Sridevi has been recognized for its cultural impact and has also been commemorated with a special award after her passing?",
+          "answerable": false,
+          "expected_answer": "Insufficient information.",
+          "expected_document_keys": [],
+          "stage_orders": {
+            "dense": [
+              "multihop_c3064f95ab263fa9",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_fccc484a245b921b",
+              "multihop_3327bb0a28f2a445",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_f219577dca157323",
+              "multihop_f3dad740f42e058b",
+              "multihop_76b2d765baecc136",
+              "multihop_24940744bb1fb5ab",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_238545133d430bbd",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_9676c004b4a2fa64",
+              "multihop_467535a0b680b29b",
+              "multihop_3ccaf5743c9112e9",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_08983717f2933bef",
+              "multihop_86b7987d94284c48",
+              "multihop_52dda7999df75328",
+              "multihop_5fd62b6dc8d82ace"
+            ],
+            "sparse": [
+              "multihop_3327bb0a28f2a445",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_6c53069505697f92",
+              "multihop_207150135fc74e4b",
+              "multihop_bda37e246a290148",
+              "multihop_9676c004b4a2fa64",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_fccc484a245b921b",
+              "multihop_f219577dca157323",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_f3dad740f42e058b",
+              "multihop_e0db0a1b62c16fc3",
+              "multihop_26d8adfc64d4804d",
+              "multihop_7c628f0975c624e5",
+              "multihop_08983717f2933bef",
+              "multihop_467535a0b680b29b",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_41ac170d09a83a85"
+            ],
+            "rrf": [
+              "multihop_5f7d4090f40fd03f",
+              "multihop_3327bb0a28f2a445",
+              "multihop_fccc484a245b921b",
+              "multihop_f219577dca157323",
+              "multihop_f3dad740f42e058b",
+              "multihop_9676c004b4a2fa64",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_467535a0b680b29b",
+              "multihop_08983717f2933bef",
+              "multihop_c3064f95ab263fa9",
+              "multihop_6c53069505697f92",
+              "multihop_207150135fc74e4b"
+            ],
+            "rerank": [
+              "multihop_f219577dca157323",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_c3064f95ab263fa9",
+              "multihop_f3dad740f42e058b",
+              "multihop_fccc484a245b921b",
+              "multihop_9676c004b4a2fa64"
+            ]
+          },
+          "route": "insufficient_evidence",
+          "rounds": 2,
+          "cited_document_keys": [
+            "multihop_f219577dca157323",
+            "multihop_5f7d4090f40fd03f",
+            "multihop_d7f1a0b9d5e73231"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 4317.832,
+          "trace_complete": true,
+          "run_id": "run_xG-llUkLBHqB"
+        },
+        {
+          "sequence": 11,
+          "id": "multihop-row-11",
+          "category": "comparison_query",
+          "question": "Does 'The Age' article suggest that Australia's Davis Cup team is aiming for an improvement in their performance compared to the previous year, while the 'Sporting News' article indicates that the South Africa national rugby team has already achieved an improvement to reach the Rugby World Cup semi-finals?",
+          "answerable": true,
+          "expected_answer": "Yes",
+          "expected_document_keys": [
+            "multihop_76b2d765baecc136",
+            "multihop_f0248675c2ebef3e"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_76b2d765baecc136",
+              "multihop_f0248675c2ebef3e",
+              "multihop_08983717f2933bef",
+              "multihop_da03ae51fd56a40a",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_467535a0b680b29b",
+              "multihop_96db611fcb1efa56",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_c2a64c498cd589e2",
+              "multihop_207150135fc74e4b",
+              "multihop_f74f498875937c9f",
+              "multihop_24940744bb1fb5ab",
+              "multihop_df8045c57c8225cd",
+              "multihop_8b5603417d5aea91",
+              "multihop_f9ad08c803e79304",
+              "multihop_8d771a261c08f44b",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_f219577dca157323",
+              "multihop_e75c92ca318f0032",
+              "multihop_09484bd341d05f5b"
+            ],
+            "sparse": [
+              "multihop_f0248675c2ebef3e",
+              "multihop_76b2d765baecc136",
+              "multihop_e75c92ca318f0032",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_da03ae51fd56a40a",
+              "multihop_6f541427ab4e6170",
+              "multihop_f9ad08c803e79304",
+              "multihop_1f364b546a95caa0",
+              "multihop_467535a0b680b29b",
+              "multihop_c51e57a58828516f",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_f219577dca157323",
+              "multihop_c129cb1312f2c76a",
+              "multihop_f74f498875937c9f",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_26d8adfc64d4804d",
+              "multihop_08983717f2933bef",
+              "multihop_7e03a063de929ec2",
+              "multihop_6c53069505697f92",
+              "multihop_e0db0a1b62c16fc3"
+            ],
+            "rrf": [
+              "multihop_76b2d765baecc136",
+              "multihop_f0248675c2ebef3e",
+              "multihop_da03ae51fd56a40a",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_467535a0b680b29b",
+              "multihop_08983717f2933bef",
+              "multihop_e75c92ca318f0032",
+              "multihop_f9ad08c803e79304",
+              "multihop_f74f498875937c9f",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_f219577dca157323",
+              "multihop_6f541427ab4e6170"
+            ],
+            "rerank": [
+              "multihop_76b2d765baecc136",
+              "multihop_f0248675c2ebef3e",
+              "multihop_da03ae51fd56a40a",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_f9ad08c803e79304"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_76b2d765baecc136",
+            "multihop_f0248675c2ebef3e"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1153.078,
+          "trace_complete": true,
+          "run_id": "run_G9UDTO3xfGps"
+        },
+        {
+          "sequence": 12,
+          "id": "multihop-row-12",
+          "category": "temporal_query",
+          "question": "After the TechCrunch report on October 7, 2023, concerning Dave Clark's comments on Flexport, and the subsequent TechCrunch article on October 30, 2023, regarding Ryan Petersen's actions at Flexport, was there a change in the nature of the events reported?",
+          "answerable": true,
+          "expected_answer": "Yes",
+          "expected_document_keys": [
+            "multihop_6c53069505697f92",
+            "multihop_41ac170d09a83a85"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_6c53069505697f92",
+              "multihop_41ac170d09a83a85",
+              "multihop_c51e57a58828516f",
+              "multihop_696d73b87590c52b",
+              "multihop_9f135c0d8232d75f",
+              "multihop_b677b8950375efb3",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_86b7987d94284c48",
+              "multihop_26d8adfc64d4804d",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_7c628f0975c624e5",
+              "multihop_cea75b157eb23200",
+              "multihop_52dda7999df75328",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_98549b9d83b7b842",
+              "multihop_6491e4e883f430da",
+              "multihop_956e995ea33296ca",
+              "multihop_238545133d430bbd"
+            ],
+            "sparse": [
+              "multihop_6c53069505697f92",
+              "multihop_956e995ea33296ca",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_09484bd341d05f5b",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_41ac170d09a83a85",
+              "multihop_6491e4e883f430da",
+              "multihop_cea75b157eb23200",
+              "multihop_fccc484a245b921b",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_da03ae51fd56a40a",
+              "multihop_6f541427ab4e6170",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_52dda7999df75328",
+              "multihop_238545133d430bbd"
+            ],
+            "rrf": [
+              "multihop_6c53069505697f92",
+              "multihop_41ac170d09a83a85",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_956e995ea33296ca",
+              "multihop_cea75b157eb23200",
+              "multihop_6491e4e883f430da",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_52dda7999df75328",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_238545133d430bbd",
+              "multihop_c51e57a58828516f",
+              "multihop_a368d33a6f3e4bd3"
+            ],
+            "rerank": [
+              "multihop_6c53069505697f92",
+              "multihop_41ac170d09a83a85",
+              "multihop_238545133d430bbd",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_c51e57a58828516f",
+              "multihop_52dda7999df75328"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_6c53069505697f92",
+            "multihop_41ac170d09a83a85",
+            "multihop_238545133d430bbd",
+            "multihop_1cec4cb7d698e0d1"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1274.838,
+          "trace_complete": true,
+          "run_id": "run_HacG07cV5Hq8"
+        },
+        {
+          "sequence": 13,
+          "id": "multihop-row-13",
+          "category": "null_query",
+          "question": "What is the first letter of the name of the company that, according to an article from The Financial Times, received the most European patents in 2021, and is also mentioned in a Bloomberg article as having faced a significant legal challenge at the European Patent Office over one of its key patents?",
+          "answerable": false,
+          "expected_answer": "Insufficient information.",
+          "expected_document_keys": [],
+          "stage_orders": {
+            "dense": [
+              "multihop_956e995ea33296ca",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_1f364b546a95caa0",
+              "multihop_c51e57a58828516f",
+              "multihop_6491e4e883f430da",
+              "multihop_26d8adfc64d4804d",
+              "multihop_0e9ec29982b19396",
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_696d73b87590c52b",
+              "multihop_7c628f0975c624e5",
+              "multihop_fe7d21b966d020d3",
+              "multihop_24940744bb1fb5ab",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_238545133d430bbd",
+              "multihop_9f135c0d8232d75f",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_41ac170d09a83a85",
+              "multihop_6c53069505697f92",
+              "multihop_cea75b157eb23200",
+              "multihop_1cec4cb7d698e0d1"
+            ],
+            "sparse": [
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_467535a0b680b29b",
+              "multihop_6c53069505697f92",
+              "multihop_e75c92ca318f0032",
+              "multihop_08983717f2933bef",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_2b7dd26240414f6a",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_26d8adfc64d4804d",
+              "multihop_6473d6302034b7c8",
+              "multihop_98549b9d83b7b842",
+              "multihop_d3f10ef170364481",
+              "multihop_f9ad08c803e79304",
+              "multihop_8f96c51f32577315",
+              "multihop_7e03a063de929ec2",
+              "multihop_cea75b157eb23200",
+              "multihop_09484bd341d05f5b",
+              "multihop_fccc484a245b921b",
+              "multihop_c51e57a58828516f"
+            ],
+            "rrf": [
+              "multihop_2187f9eb151d0bdf",
+              "multihop_26d8adfc64d4804d",
+              "multihop_6c53069505697f92",
+              "multihop_c51e57a58828516f",
+              "multihop_cea75b157eb23200",
+              "multihop_956e995ea33296ca",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_467535a0b680b29b",
+              "multihop_1f364b546a95caa0",
+              "multihop_e75c92ca318f0032",
+              "multihop_6491e4e883f430da",
+              "multihop_08983717f2933bef"
+            ],
+            "rerank": [
+              "multihop_1f364b546a95caa0",
+              "multihop_956e995ea33296ca",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_26d8adfc64d4804d",
+              "multihop_c51e57a58828516f",
+              "multihop_6491e4e883f430da"
+            ]
+          },
+          "route": "insufficient_evidence",
+          "rounds": 2,
+          "cited_document_keys": [
+            "multihop_a368d33a6f3e4bd3",
+            "multihop_956e995ea33296ca",
+            "multihop_1f364b546a95caa0"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 3479.524,
+          "trace_complete": true,
+          "run_id": "run_dPb6-ORt-t0o"
+        },
+        {
+          "sequence": 14,
+          "id": "multihop-row-14",
+          "category": "comparison_query",
+          "question": "Does 'The Independent - Life and Style' article suggesting Prince William's emotional state regarding Princess Diana's death align with the same publication's depiction of the events leading up to her death in 'The Crown season six'?",
+          "answerable": true,
+          "expected_answer": "Yes",
+          "expected_document_keys": [
+            "multihop_d7f1a0b9d5e73231",
+            "multihop_c3064f95ab263fa9"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_c3064f95ab263fa9",
+              "multihop_f3dad740f42e058b",
+              "multihop_3327bb0a28f2a445",
+              "multihop_9676c004b4a2fa64",
+              "multihop_b677b8950375efb3",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_7e03a063de929ec2",
+              "multihop_0d455b20fbe0992a",
+              "multihop_696d73b87590c52b",
+              "multihop_98549b9d83b7b842",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_9398381aea11337b",
+              "multihop_86b7987d94284c48",
+              "multihop_238545133d430bbd",
+              "multihop_fccc484a245b921b",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_b99c460b45d6fdad",
+              "multihop_f219577dca157323",
+              "multihop_7c628f0975c624e5"
+            ],
+            "sparse": [
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_c3064f95ab263fa9",
+              "multihop_f219577dca157323",
+              "multihop_9676c004b4a2fa64",
+              "multihop_3327bb0a28f2a445",
+              "multihop_f3dad740f42e058b",
+              "multihop_fccc484a245b921b",
+              "multihop_c129cb1312f2c76a",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_813c087ead41138a",
+              "multihop_ec1a5621287daf1e",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_e75c92ca318f0032",
+              "multihop_207150135fc74e4b",
+              "multihop_0d455b20fbe0992a",
+              "multihop_8d771a261c08f44b",
+              "multihop_cf4224bd493c90d8",
+              "multihop_f93661f4884cedbd",
+              "multihop_1cec4cb7d698e0d1"
+            ],
+            "rrf": [
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_c3064f95ab263fa9",
+              "multihop_f3dad740f42e058b",
+              "multihop_3327bb0a28f2a445",
+              "multihop_9676c004b4a2fa64",
+              "multihop_f219577dca157323",
+              "multihop_fccc484a245b921b",
+              "multihop_0d455b20fbe0992a",
+              "multihop_b677b8950375efb3",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_7e03a063de929ec2",
+              "multihop_c129cb1312f2c76a"
+            ],
+            "rerank": [
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_c3064f95ab263fa9",
+              "multihop_f3dad740f42e058b",
+              "multihop_9676c004b4a2fa64",
+              "multihop_fccc484a245b921b",
+              "multihop_f219577dca157323"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_d7f1a0b9d5e73231",
+            "multihop_c3064f95ab263fa9",
+            "multihop_f3dad740f42e058b",
+            "multihop_9676c004b4a2fa64"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 1101.112,
+          "trace_complete": true,
+          "run_id": "run_uSLaetxB4QnZ"
+        },
+        {
+          "sequence": 15,
+          "id": "multihop-row-17",
+          "category": "temporal_query",
+          "question": "Was there no change in the portrayal of Google's influence on the digital ecosystem between the report from The Verge on Google's impact on the internet's appearance published on November 1, 2023, and the report from TechCrunch on a class action antitrust suit against Google published later?",
+          "answerable": true,
+          "expected_answer": "no",
+          "expected_document_keys": [
+            "multihop_109c9f6989d66f7c",
+            "multihop_12828bab98739ff0",
+            "multihop_1f364b546a95caa0"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_1f364b546a95caa0",
+              "multihop_109c9f6989d66f7c",
+              "multihop_956e995ea33296ca",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_26d8adfc64d4804d",
+              "multihop_f74f498875937c9f",
+              "multihop_0e9ec29982b19396",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_12828bab98739ff0",
+              "multihop_24940744bb1fb5ab",
+              "multihop_c51e57a58828516f",
+              "multihop_cea75b157eb23200",
+              "multihop_6f541427ab4e6170",
+              "multihop_6491e4e883f430da",
+              "multihop_ec1a5621287daf1e",
+              "multihop_6c53069505697f92",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_2187f9eb151d0bdf"
+            ],
+            "sparse": [
+              "multihop_1f364b546a95caa0",
+              "multihop_956e995ea33296ca",
+              "multihop_6c53069505697f92",
+              "multihop_24940744bb1fb5ab",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_12828bab98739ff0",
+              "multihop_0e9ec29982b19396",
+              "multihop_fccc484a245b921b",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_26d8adfc64d4804d",
+              "multihop_6f541427ab4e6170",
+              "multihop_da03ae51fd56a40a",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_1f10286355119fad",
+              "multihop_ec1a5621287daf1e",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_6491e4e883f430da",
+              "multihop_c51e57a58828516f"
+            ],
+            "rrf": [
+              "multihop_1f364b546a95caa0",
+              "multihop_956e995ea33296ca",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_24940744bb1fb5ab",
+              "multihop_0e9ec29982b19396",
+              "multihop_26d8adfc64d4804d",
+              "multihop_12828bab98739ff0",
+              "multihop_6c53069505697f92",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_6f541427ab4e6170",
+              "multihop_c51e57a58828516f"
+            ],
+            "rerank": [
+              "multihop_12828bab98739ff0",
+              "multihop_1f364b546a95caa0",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_956e995ea33296ca",
+              "multihop_24940744bb1fb5ab",
+              "multihop_6d4d4e9afad9f5d5"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_12828bab98739ff0",
+            "multihop_1f364b546a95caa0",
+            "multihop_cfd03feaa1281c5d",
+            "multihop_956e995ea33296ca"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1231.343,
+          "trace_complete": true,
+          "run_id": "run_JxyIEyP8QBSP"
+        },
+        {
+          "sequence": 16,
+          "id": "multihop-row-18",
+          "category": "null_query",
+          "question": "Considering the features highlighted in an article from The Verge about the iPhone 13's camera system and the battery life improvements mentioned in a piece by CNET, which model of the iPhone 13 series, represented by a single Roman numeral, was noted for having the best combination of both attributes?",
+          "answerable": false,
+          "expected_answer": "Insufficient information.",
+          "expected_document_keys": [],
+          "stage_orders": {
+            "dense": [
+              "multihop_fe7d21b966d020d3",
+              "multihop_24940744bb1fb5ab",
+              "multihop_09484bd341d05f5b",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_6f541427ab4e6170",
+              "multihop_2b7dd26240414f6a",
+              "multihop_ec1a5621287daf1e",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_3ccaf5743c9112e9",
+              "multihop_cea75b157eb23200",
+              "multihop_6491e4e883f430da",
+              "multihop_8b5603417d5aea91",
+              "multihop_b99c460b45d6fdad",
+              "multihop_1f10286355119fad",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_0e9ec29982b19396",
+              "multihop_8d771a261c08f44b"
+            ],
+            "sparse": [
+              "multihop_467535a0b680b29b",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_fccc484a245b921b",
+              "multihop_696d73b87590c52b",
+              "multihop_b677b8950375efb3",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_9398381aea11337b",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_8b5603417d5aea91",
+              "multihop_6c53069505697f92",
+              "multihop_f9ad08c803e79304",
+              "multihop_26d8adfc64d4804d",
+              "multihop_6f541427ab4e6170",
+              "multihop_0d455b20fbe0992a",
+              "multihop_bda37e246a290148",
+              "multihop_9676c004b4a2fa64",
+              "multihop_207150135fc74e4b",
+              "multihop_24940744bb1fb5ab"
+            ],
+            "rrf": [
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_6f541427ab4e6170",
+              "multihop_24940744bb1fb5ab",
+              "multihop_8b5603417d5aea91",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_fe7d21b966d020d3",
+              "multihop_467535a0b680b29b",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_09484bd341d05f5b",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_fccc484a245b921b",
+              "multihop_696d73b87590c52b"
+            ],
+            "rerank": [
+              "multihop_696d73b87590c52b",
+              "multihop_09484bd341d05f5b",
+              "multihop_24940744bb1fb5ab",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_6f541427ab4e6170",
+              "multihop_1cec4cb7d698e0d1"
+            ]
+          },
+          "route": "insufficient_evidence",
+          "rounds": 2,
+          "cited_document_keys": [
+            "multihop_24940744bb1fb5ab",
+            "multihop_109c9f6989d66f7c",
+            "multihop_b677b8950375efb3"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 3225.792,
+          "trace_complete": true,
+          "run_id": "run_HCwxfpRc9IGC"
+        },
+        {
+          "sequence": 17,
+          "id": "multihop-row-19",
+          "category": "comparison_query",
+          "question": "Does the Sporting News article suggest that streaming services do not require a subscription for viewing the Cowboys vs. 49ers game, in contrast to the Polygon article's claim about film availability on streaming platforms without a subscription?",
+          "answerable": true,
+          "expected_answer": "no",
+          "expected_document_keys": [
+            "multihop_bda37e246a290148",
+            "multihop_3ccaf5743c9112e9"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_bda37e246a290148",
+              "multihop_8d771a261c08f44b",
+              "multihop_813c087ead41138a",
+              "multihop_8f96c51f32577315",
+              "multihop_3ccaf5743c9112e9",
+              "multihop_cea75b157eb23200",
+              "multihop_f9ad08c803e79304",
+              "multihop_87dfa0a87e722b5f",
+              "multihop_820d4900109e0fb3",
+              "multihop_c2a64c498cd589e2",
+              "multihop_36b20d00ab6ed517",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_da03ae51fd56a40a",
+              "multihop_8b5603417d5aea91",
+              "multihop_09484bd341d05f5b",
+              "multihop_467535a0b680b29b",
+              "multihop_c129cb1312f2c76a",
+              "multihop_e75c92ca318f0032",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_d3f10ef170364481"
+            ],
+            "sparse": [
+              "multihop_bda37e246a290148",
+              "multihop_3ccaf5743c9112e9",
+              "multihop_87dfa0a87e722b5f",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_8f96c51f32577315",
+              "multihop_820d4900109e0fb3",
+              "multihop_08983717f2933bef",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_813c087ead41138a",
+              "multihop_e75c92ca318f0032",
+              "multihop_8d771a261c08f44b",
+              "multihop_cea75b157eb23200",
+              "multihop_f0248675c2ebef3e",
+              "multihop_36b20d00ab6ed517",
+              "multihop_8b5603417d5aea91",
+              "multihop_956e995ea33296ca",
+              "multihop_26d8adfc64d4804d",
+              "multihop_c2a64c498cd589e2",
+              "multihop_5fd62b6dc8d82ace",
+              "multihop_e77d1edaa83deb8e"
+            ],
+            "rrf": [
+              "multihop_bda37e246a290148",
+              "multihop_3ccaf5743c9112e9",
+              "multihop_8f96c51f32577315",
+              "multihop_87dfa0a87e722b5f",
+              "multihop_813c087ead41138a",
+              "multihop_8d771a261c08f44b",
+              "multihop_820d4900109e0fb3",
+              "multihop_cea75b157eb23200",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_36b20d00ab6ed517",
+              "multihop_c2a64c498cd589e2",
+              "multihop_e75c92ca318f0032"
+            ],
+            "rerank": [
+              "multihop_bda37e246a290148",
+              "multihop_3ccaf5743c9112e9",
+              "multihop_36b20d00ab6ed517",
+              "multihop_820d4900109e0fb3",
+              "multihop_8d771a261c08f44b",
+              "multihop_813c087ead41138a"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_bda37e246a290148",
+            "multihop_3ccaf5743c9112e9"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1140.366,
+          "trace_complete": true,
+          "run_id": "run_gXQaFpOIxyqm"
+        },
+        {
+          "sequence": 18,
+          "id": "multihop-row-20",
+          "category": "null_query",
+          "question": "Considering the information from an article in The New York Times about the band Used To Be Young's latest tour and a review in Rolling Stone discussing the standout performance of a particular member during a recent concert, which member of Used To Be Young was highlighted for their exceptional solo during the tour's opening night and also plays the instrument that begins with the letter 'B'?",
+          "answerable": false,
+          "expected_answer": "Insufficient information.",
+          "expected_document_keys": [],
+          "stage_orders": {
+            "dense": [
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_c2a64c498cd589e2",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_08983717f2933bef",
+              "multihop_f219577dca157323",
+              "multihop_f9ad08c803e79304",
+              "multihop_96db611fcb1efa56",
+              "multihop_467535a0b680b29b",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_df8045c57c8225cd",
+              "multihop_09484bd341d05f5b",
+              "multihop_b677b8950375efb3",
+              "multihop_da03ae51fd56a40a",
+              "multihop_238545133d430bbd",
+              "multihop_fccc484a245b921b",
+              "multihop_3ccaf5743c9112e9",
+              "multihop_cea75b157eb23200",
+              "multihop_86b7987d94284c48",
+              "multihop_c3064f95ab263fa9"
+            ],
+            "sparse": [
+              "multihop_08983717f2933bef",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_467535a0b680b29b",
+              "multihop_6c53069505697f92",
+              "multihop_bda37e246a290148",
+              "multihop_9f135c0d8232d75f",
+              "multihop_207150135fc74e4b",
+              "multihop_820d4900109e0fb3",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_f0248675c2ebef3e",
+              "multihop_8b5603417d5aea91",
+              "multihop_98549b9d83b7b842",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_e0db0a1b62c16fc3",
+              "multihop_6f541427ab4e6170",
+              "multihop_b677b8950375efb3",
+              "multihop_26d8adfc64d4804d",
+              "multihop_f9ad08c803e79304"
+            ],
+            "rrf": [
+              "multihop_5f7d4090f40fd03f",
+              "multihop_08983717f2933bef",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_467535a0b680b29b",
+              "multihop_f9ad08c803e79304",
+              "multihop_b677b8950375efb3",
+              "multihop_c2a64c498cd589e2",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_6c53069505697f92",
+              "multihop_bda37e246a290148",
+              "multihop_f219577dca157323",
+              "multihop_9f135c0d8232d75f"
+            ],
+            "rerank": [
+              "multihop_5f7d4090f40fd03f",
+              "multihop_08983717f2933bef",
+              "multihop_467535a0b680b29b",
+              "multihop_c2a64c498cd589e2",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_b7d1a2afbe8d404c"
+            ]
+          },
+          "route": "insufficient_evidence",
+          "rounds": 2,
+          "cited_document_keys": [
+            "multihop_5f7d4090f40fd03f",
+            "multihop_08983717f2933bef",
+            "multihop_467535a0b680b29b"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 4587.523,
+          "trace_complete": true,
+          "run_id": "run_9-7KmoouU59c"
+        },
+        {
+          "sequence": 19,
+          "id": "multihop-row-21",
+          "category": "temporal_query",
+          "question": "Has the advice provided by Sporting News to bettors regarding the evaluation of betting opportunities and offers involved reading requirements, going with the favored Eagles, and focusing on hype between the reports published on September 28, 2023, and December 18, 2023?",
+          "answerable": true,
+          "expected_answer": "no",
+          "expected_document_keys": [
+            "multihop_df8045c57c8225cd",
+            "multihop_87dfa0a87e722b5f",
+            "multihop_f9ad08c803e79304"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_87dfa0a87e722b5f",
+              "multihop_f9ad08c803e79304",
+              "multihop_8b5603417d5aea91",
+              "multihop_96db611fcb1efa56",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_e75c92ca318f0032",
+              "multihop_df8045c57c8225cd",
+              "multihop_8d771a261c08f44b",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_c129cb1312f2c76a",
+              "multihop_bda37e246a290148",
+              "multihop_d3f10ef170364481",
+              "multihop_467535a0b680b29b",
+              "multihop_da03ae51fd56a40a",
+              "multihop_820d4900109e0fb3",
+              "multihop_813c087ead41138a",
+              "multihop_36b20d00ab6ed517",
+              "multihop_f0248675c2ebef3e",
+              "multihop_cea75b157eb23200",
+              "multihop_a368d33a6f3e4bd3"
+            ],
+            "sparse": [
+              "multihop_87dfa0a87e722b5f",
+              "multihop_df8045c57c8225cd",
+              "multihop_f9ad08c803e79304",
+              "multihop_c129cb1312f2c76a",
+              "multihop_8b5603417d5aea91",
+              "multihop_956e995ea33296ca",
+              "multihop_26d8adfc64d4804d",
+              "multihop_bda37e246a290148",
+              "multihop_e75c92ca318f0032",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_7c628f0975c624e5",
+              "multihop_6491e4e883f430da",
+              "multihop_fccc484a245b921b",
+              "multihop_813c087ead41138a",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_c2a64c498cd589e2",
+              "multihop_da03ae51fd56a40a",
+              "multihop_3ccaf5743c9112e9",
+              "multihop_2187f9eb151d0bdf"
+            ],
+            "rrf": [
+              "multihop_87dfa0a87e722b5f",
+              "multihop_f9ad08c803e79304",
+              "multihop_8b5603417d5aea91",
+              "multihop_df8045c57c8225cd",
+              "multihop_c129cb1312f2c76a",
+              "multihop_e75c92ca318f0032",
+              "multihop_bda37e246a290148",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_b9ae7c91d0b61f5b",
+              "multihop_813c087ead41138a",
+              "multihop_da03ae51fd56a40a",
+              "multihop_96db611fcb1efa56"
+            ],
+            "rerank": [
+              "multihop_87dfa0a87e722b5f",
+              "multihop_f9ad08c803e79304",
+              "multihop_df8045c57c8225cd",
+              "multihop_8b5603417d5aea91",
+              "multihop_c129cb1312f2c76a",
+              "multihop_da03ae51fd56a40a"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_87dfa0a87e722b5f",
+            "multihop_f9ad08c803e79304",
+            "multihop_df8045c57c8225cd",
+            "multihop_8b5603417d5aea91"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1176.814,
+          "trace_complete": true,
+          "run_id": "run_TgqQNTKVqBfL"
+        },
+        {
+          "sequence": 20,
+          "id": "multihop-row-23",
+          "category": "temporal_query",
+          "question": "Was there inconsistency in Jada Pinkett Smith's statements regarding what she learned from her children after The Independent - Life and Style's report on her views on self-acceptance published at 13:41:30, and before The Independent - Life and Style's subsequent report on the same topic published at 15:48:10 on the same day?",
+          "answerable": true,
+          "expected_answer": "no",
+          "expected_document_keys": [
+            "multihop_9676c004b4a2fa64",
+            "multihop_f3dad740f42e058b",
+            "multihop_3327bb0a28f2a445"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_f3dad740f42e058b",
+              "multihop_3327bb0a28f2a445",
+              "multihop_9676c004b4a2fa64",
+              "multihop_c3064f95ab263fa9",
+              "multihop_fccc484a245b921b",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_f219577dca157323",
+              "multihop_c51e57a58828516f",
+              "multihop_98549b9d83b7b842",
+              "multihop_86b7987d94284c48",
+              "multihop_696d73b87590c52b",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_6c53069505697f92",
+              "multihop_b677b8950375efb3",
+              "multihop_9f135c0d8232d75f",
+              "multihop_cea75b157eb23200",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_09484bd341d05f5b",
+              "multihop_ad1b968ef37ff1ff"
+            ],
+            "sparse": [
+              "multihop_3327bb0a28f2a445",
+              "multihop_f3dad740f42e058b",
+              "multihop_9676c004b4a2fa64",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_f219577dca157323",
+              "multihop_6c53069505697f92",
+              "multihop_fccc484a245b921b",
+              "multihop_09484bd341d05f5b",
+              "multihop_c3064f95ab263fa9",
+              "multihop_98549b9d83b7b842",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_da03ae51fd56a40a",
+              "multihop_956e995ea33296ca",
+              "multihop_5f7d4090f40fd03f",
+              "multihop_6491e4e883f430da",
+              "multihop_207150135fc74e4b",
+              "multihop_813c087ead41138a",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_08983717f2933bef"
+            ],
+            "rrf": [
+              "multihop_f3dad740f42e058b",
+              "multihop_3327bb0a28f2a445",
+              "multihop_9676c004b4a2fa64",
+              "multihop_fccc484a245b921b",
+              "multihop_f219577dca157323",
+              "multihop_c3064f95ab263fa9",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_98549b9d83b7b842",
+              "multihop_6c53069505697f92",
+              "multihop_09484bd341d05f5b",
+              "multihop_a368d33a6f3e4bd3"
+            ],
+            "rerank": [
+              "multihop_3327bb0a28f2a445",
+              "multihop_f3dad740f42e058b",
+              "multihop_9676c004b4a2fa64",
+              "multihop_fccc484a245b921b",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_f219577dca157323"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_3327bb0a28f2a445",
+            "multihop_f3dad740f42e058b",
+            "multihop_9676c004b4a2fa64"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1336.289,
+          "trace_complete": true,
+          "run_id": "run_fB-THZm0qwrY"
+        },
+        {
+          "sequence": 21,
+          "id": "multihop-row-24",
+          "category": "null_query",
+          "question": "Considering the economic forecasts from a Bloomberg article and the archaeological discoveries reported by Al Jazeera, which country in North Africa, expected to see a significant rise in GDP, also recently unveiled an ancient artifact believed to be from the reign of a pharaoh whose name begins with the letter \"T\"?",
+          "answerable": false,
+          "expected_answer": "Insufficient information.",
+          "expected_document_keys": [],
+          "stage_orders": {
+            "dense": [
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_238545133d430bbd",
+              "multihop_7e03a063de929ec2",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_96db611fcb1efa56",
+              "multihop_e77d1edaa83deb8e",
+              "multihop_c51e57a58828516f",
+              "multihop_df8045c57c8225cd",
+              "multihop_24940744bb1fb5ab",
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_956e995ea33296ca",
+              "multihop_52dda7999df75328",
+              "multihop_cea75b157eb23200",
+              "multihop_1f10286355119fad",
+              "multihop_9f135c0d8232d75f",
+              "multihop_86b7987d94284c48",
+              "multihop_8b5603417d5aea91",
+              "multihop_da03ae51fd56a40a",
+              "multihop_696d73b87590c52b"
+            ],
+            "sparse": [
+              "multihop_bda37e246a290148",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_f0248675c2ebef3e",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_26d8adfc64d4804d",
+              "multihop_8b5603417d5aea91",
+              "multihop_467535a0b680b29b",
+              "multihop_820d4900109e0fb3",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_6473d6302034b7c8",
+              "multihop_fccc484a245b921b",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_e75c92ca318f0032",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_6c53069505697f92",
+              "multihop_f9ad08c803e79304",
+              "multihop_6f541427ab4e6170",
+              "multihop_9f135c0d8232d75f",
+              "multihop_cea75b157eb23200"
+            ],
+            "rrf": [
+              "multihop_8b5603417d5aea91",
+              "multihop_cea75b157eb23200",
+              "multihop_9f135c0d8232d75f",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_bda37e246a290148",
+              "multihop_f39fc075d2ef71a6",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_238545133d430bbd",
+              "multihop_f0248675c2ebef3e",
+              "multihop_7e03a063de929ec2",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_78e5e0acac9fd9de"
+            ],
+            "rerank": [
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_cea75b157eb23200",
+              "multihop_238545133d430bbd",
+              "multihop_7e03a063de929ec2",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_6d4d4e9afad9f5d5"
+            ]
+          },
+          "route": "insufficient_evidence",
+          "rounds": 2,
+          "cited_document_keys": [
+            "multihop_9f135c0d8232d75f",
+            "multihop_f39fc075d2ef71a6",
+            "multihop_cea75b157eb23200"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 3310.213,
+          "trace_complete": true,
+          "run_id": "run_6P2DE4epTjfx"
+        },
+        {
+          "sequence": 22,
+          "id": "multihop-row-25",
+          "category": "temporal_query",
+          "question": "Was the news about Taylor Swift's relationship with Travis Kelce inconsistent with the later report from The Independent - Life and Style on December 6, 2023?",
+          "answerable": true,
+          "expected_answer": "no",
+          "expected_document_keys": [
+            "multihop_86cc56a7fc89d78b",
+            "multihop_c2a64c498cd589e2",
+            "multihop_f219577dca157323"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_f219577dca157323",
+              "multihop_c2a64c498cd589e2",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_f9ad08c803e79304",
+              "multihop_fccc484a245b921b",
+              "multihop_3327bb0a28f2a445",
+              "multihop_9676c004b4a2fa64",
+              "multihop_6c53069505697f92",
+              "multihop_c51e57a58828516f",
+              "multihop_c3064f95ab263fa9",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_52dda7999df75328",
+              "multihop_09484bd341d05f5b",
+              "multihop_9398381aea11337b",
+              "multihop_9f135c0d8232d75f",
+              "multihop_696d73b87590c52b",
+              "multihop_2187f9eb151d0bdf"
+            ],
+            "sparse": [
+              "multihop_f219577dca157323",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_c2a64c498cd589e2",
+              "multihop_d7f1a0b9d5e73231",
+              "multihop_f9ad08c803e79304",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_9676c004b4a2fa64",
+              "multihop_fccc484a245b921b",
+              "multihop_6c53069505697f92",
+              "multihop_c3064f95ab263fa9",
+              "multihop_f3dad740f42e058b",
+              "multihop_bda37e246a290148",
+              "multihop_3327bb0a28f2a445",
+              "multihop_26d8adfc64d4804d",
+              "multihop_87dfa0a87e722b5f",
+              "multihop_b677b8950375efb3",
+              "multihop_3ccaf5743c9112e9",
+              "multihop_813c087ead41138a",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_78e5e0acac9fd9de"
+            ],
+            "rrf": [
+              "multihop_f219577dca157323",
+              "multihop_c2a64c498cd589e2",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_b7d1a2afbe8d404c",
+              "multihop_f9ad08c803e79304",
+              "multihop_fccc484a245b921b",
+              "multihop_9676c004b4a2fa64",
+              "multihop_6c53069505697f92",
+              "multihop_3327bb0a28f2a445",
+              "multihop_c3064f95ab263fa9",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_d7f1a0b9d5e73231"
+            ],
+            "rerank": [
+              "multihop_f219577dca157323",
+              "multihop_86cc56a7fc89d78b",
+              "multihop_c2a64c498cd589e2",
+              "multihop_9676c004b4a2fa64",
+              "multihop_c3064f95ab263fa9",
+              "multihop_f9ad08c803e79304"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_f219577dca157323",
+            "multihop_86cc56a7fc89d78b",
+            "multihop_c2a64c498cd589e2"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1103.529,
+          "trace_complete": true,
+          "run_id": "run_nsflbAFXhFnJ"
+        },
+        {
+          "sequence": 23,
+          "id": "multihop-row-26",
+          "category": "temporal_query",
+          "question": "Has the portrayal of Google's market practices in reports by The Age before October 22, 2023, remained consistent with the depiction in The Verge's coverage of the Epic v. Google case, and with TechCrunch's report on the class action antitrust suit filed against Google?",
+          "answerable": true,
+          "expected_answer": "no",
+          "expected_document_keys": [
+            "multihop_12828bab98739ff0",
+            "multihop_a368d33a6f3e4bd3",
+            "multihop_1f364b546a95caa0"
+          ],
+          "stage_orders": {
+            "dense": [
+              "multihop_1f364b546a95caa0",
+              "multihop_26d8adfc64d4804d",
+              "multihop_12828bab98739ff0",
+              "multihop_956e995ea33296ca",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_f74f498875937c9f",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_24940744bb1fb5ab",
+              "multihop_0e9ec29982b19396",
+              "multihop_c51e57a58828516f",
+              "multihop_6f541427ab4e6170",
+              "multihop_ec1a5621287daf1e",
+              "multihop_6c53069505697f92",
+              "multihop_6491e4e883f430da",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_d0dc8f2e8b380cb5",
+              "multihop_cea75b157eb23200",
+              "multihop_109c9f6989d66f7c",
+              "multihop_7c628f0975c624e5"
+            ],
+            "sparse": [
+              "multihop_1f364b546a95caa0",
+              "multihop_956e995ea33296ca",
+              "multihop_12828bab98739ff0",
+              "multihop_26d8adfc64d4804d",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_0e9ec29982b19396",
+              "multihop_24940744bb1fb5ab",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_6f541427ab4e6170",
+              "multihop_f74f498875937c9f",
+              "multihop_fe7d21b966d020d3",
+              "multihop_ec1a5621287daf1e",
+              "multihop_6c53069505697f92",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_ad1b968ef37ff1ff",
+              "multihop_76b2d765baecc136",
+              "multihop_f219577dca157323",
+              "multihop_fccc484a245b921b",
+              "multihop_3ccaf5743c9112e9"
+            ],
+            "rrf": [
+              "multihop_1f364b546a95caa0",
+              "multihop_26d8adfc64d4804d",
+              "multihop_956e995ea33296ca",
+              "multihop_12828bab98739ff0",
+              "multihop_6d4d4e9afad9f5d5",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_cfd03feaa1281c5d",
+              "multihop_0e9ec29982b19396",
+              "multihop_24940744bb1fb5ab",
+              "multihop_f74f498875937c9f",
+              "multihop_6f541427ab4e6170",
+              "multihop_ec1a5621287daf1e"
+            ],
+            "rerank": [
+              "multihop_12828bab98739ff0",
+              "multihop_956e995ea33296ca",
+              "multihop_1f364b546a95caa0",
+              "multihop_24940744bb1fb5ab",
+              "multihop_26d8adfc64d4804d",
+              "multihop_a368d33a6f3e4bd3"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "multihop_12828bab98739ff0",
+            "multihop_956e995ea33296ca",
+            "multihop_1f364b546a95caa0",
+            "multihop_24940744bb1fb5ab"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 1200.804,
+          "trace_complete": true,
+          "run_id": "run_oIdrc6UH8q_E"
+        },
+        {
+          "sequence": 24,
+          "id": "multihop-row-38",
+          "category": "null_query",
+          "question": "Considering the information from an article by The Verge and another by Forbes about Sygic, which letter represents both the first character of the European country where Sygic is headquartered and the last character of the name of Sygic's CEO as mentioned in these articles?",
+          "answerable": false,
+          "expected_answer": "Insufficient information.",
+          "expected_document_keys": [],
+          "stage_orders": {
+            "dense": [
+              "multihop_6491e4e883f430da",
+              "multihop_24940744bb1fb5ab",
+              "multihop_7c628f0975c624e5",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_2187f9eb151d0bdf",
+              "multihop_fccc484a245b921b",
+              "multihop_696d73b87590c52b",
+              "multihop_9f135c0d8232d75f",
+              "multihop_9398381aea11337b",
+              "multihop_6c53069505697f92",
+              "multihop_7a4e22f59cb989e9",
+              "multihop_78e5e0acac9fd9de",
+              "multihop_c51e57a58828516f",
+              "multihop_26d8adfc64d4804d",
+              "multihop_2b7dd26240414f6a",
+              "multihop_f219577dca157323",
+              "multihop_ff855d1ecb8e1f8a",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_52dda7999df75328",
+              "multihop_f39fc075d2ef71a6"
+            ],
+            "sparse": [
+              "multihop_6c53069505697f92",
+              "multihop_b677b8950375efb3",
+              "multihop_9398381aea11337b",
+              "multihop_696d73b87590c52b",
+              "multihop_26d8adfc64d4804d",
+              "multihop_a368d33a6f3e4bd3",
+              "multihop_6473d6302034b7c8",
+              "multihop_fccc484a245b921b",
+              "multihop_467535a0b680b29b",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_7c628f0975c624e5",
+              "multihop_da03ae51fd56a40a",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_9f135c0d8232d75f",
+              "multihop_f9ad08c803e79304",
+              "multihop_b99c460b45d6fdad",
+              "multihop_0d455b20fbe0992a",
+              "multihop_c2a64c498cd589e2",
+              "multihop_6491e4e883f430da",
+              "multihop_8f96c51f32577315"
+            ],
+            "rrf": [
+              "multihop_6c53069505697f92",
+              "multihop_696d73b87590c52b",
+              "multihop_9398381aea11337b",
+              "multihop_7c628f0975c624e5",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_fccc484a245b921b",
+              "multihop_6491e4e883f430da",
+              "multihop_26d8adfc64d4804d",
+              "multihop_9f135c0d8232d75f",
+              "multihop_1cec4cb7d698e0d1",
+              "multihop_24940744bb1fb5ab",
+              "multihop_b677b8950375efb3"
+            ],
+            "rerank": [
+              "multihop_9398381aea11337b",
+              "multihop_696d73b87590c52b",
+              "multihop_24940744bb1fb5ab",
+              "multihop_b677b8950375efb3",
+              "multihop_9f2f1a128c8db5f1",
+              "multihop_9f135c0d8232d75f"
+            ]
+          },
+          "route": "iterative_rag",
+          "rounds": 2,
+          "cited_document_keys": [
+            "multihop_24940744bb1fb5ab",
+            "multihop_109c9f6989d66f7c",
+            "multihop_cfd03feaa1281c5d",
+            "multihop_956e995ea33296ca"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 4237.178,
+          "trace_complete": true,
+          "run_id": "run_mi9oICjSF1NM"
+        }
+      ]
+    },
+    {
+      "name": "bilingual-local-control",
+      "source": "project-authored deterministic control set",
+      "sampling_policy": "all 6 documents and all 5 questions",
+      "documents": 6,
+      "examples": 5,
+      "answerable_examples": 4,
+      "unanswerable_examples": 1,
+      "index": {
+        "index_version_id": "idx_fVg5jV0f0Cld",
+        "documents": 6,
+        "chunks": 6,
+        "active": true,
+        "chunker": "structure_v1",
+        "embedding_provider": "openai",
+        "embedding_model": "ai/qwen3-embedding:0.6B-F16",
+        "embedding_dimensions": 1024,
+        "last_embedding_retry_count": 0,
+        "latency_ms": 124.218
+      },
+      "job_trace": {
+        "parse_jobs_with_four_or_more_events": 6,
+        "parse_jobs": 6,
+        "index_event_stages": [
+          "queued",
+          "starting",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "chunking",
+          "embedding",
+          "persisting",
+          "completed"
+        ]
+      },
+      "retrieval_by_stage": {
+        "dense": {
+          "all_evidence_at_10": 1.0,
+          "hit_at_1": 1.0,
+          "hit_at_10": 1.0,
+          "hit_at_3": 1.0,
+          "hit_at_5": 1.0,
+          "mrr_at_10": 1.0,
+          "ndcg_at_10": 1.0,
+          "recall_at_10": 1.0
+        },
+        "sparse": {
+          "all_evidence_at_10": 0.5,
+          "hit_at_1": 0.5,
+          "hit_at_10": 0.75,
+          "hit_at_3": 0.75,
+          "hit_at_5": 0.75,
+          "mrr_at_10": 0.625,
+          "ndcg_at_10": 0.561019,
+          "recall_at_10": 0.625
+        },
+        "rrf": {
+          "all_evidence_at_10": 1.0,
+          "hit_at_1": 0.75,
+          "hit_at_10": 1.0,
+          "hit_at_3": 1.0,
+          "hit_at_5": 1.0,
+          "mrr_at_10": 0.833333,
+          "ndcg_at_10": 0.844304,
+          "recall_at_10": 1.0
+        },
+        "rerank": {
+          "all_evidence_at_10": 1.0,
+          "hit_at_1": 1.0,
+          "hit_at_10": 1.0,
+          "hit_at_3": 1.0,
+          "hit_at_5": 1.0,
+          "mrr_at_10": 1.0,
+          "ndcg_at_10": 1.0,
+          "recall_at_10": 1.0
+        }
+      },
+      "agent": {
+        "answerability_accuracy": 1.0,
+        "evidence_hit_rate_all_examples": 0.8,
+        "evidence_hit_rate_answerable": 1.0,
+        "all_evidence_cited_rate_answerable": 1.0,
+        "answer_or_citation_contains_gold_rate": 0.6,
+        "trace_completeness_rate": 1.0,
+        "route_counts": {
+          "insufficient_evidence": 1,
+          "single_pass_rag": 4
+        }
+      },
+      "latency_ms": {
+        "mean": 384.666,
+        "p50": 332.816,
+        "p95": 601.641,
+        "max": 601.641
+      },
+      "details": [
+        {
+          "sequence": 1,
+          "id": "zh-1",
+          "category": "zh",
+          "question": "员工每年有多少天带薪年假？",
+          "answerable": true,
+          "expected_answer": "十二天",
+          "expected_document_keys": [
+            "leave_zh"
+          ],
+          "stage_orders": {
+            "dense": [
+              "leave_zh",
+              "harbor_schedule",
+              "security_en",
+              "harbor_budget",
+              "sku_alpha",
+              "prompt_attack"
+            ],
+            "sparse": [
+              "leave_zh",
+              "sku_alpha"
+            ],
+            "rrf": [
+              "leave_zh",
+              "sku_alpha",
+              "harbor_schedule",
+              "security_en",
+              "harbor_budget",
+              "prompt_attack"
+            ],
+            "rerank": [
+              "leave_zh",
+              "harbor_schedule",
+              "prompt_attack",
+              "security_en",
+              "sku_alpha",
+              "harbor_budget"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "leave_zh"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 356.253,
+          "trace_complete": true,
+          "run_id": "run_whASyCcmnHTA"
+        },
+        {
+          "sequence": 2,
+          "id": "cross-1",
+          "category": "zh_to_en",
+          "question": "严重安全事件必须在几小时内上报？",
+          "answerable": true,
+          "expected_answer": "four hours",
+          "expected_document_keys": [
+            "security_en"
+          ],
+          "stage_orders": {
+            "dense": [
+              "security_en",
+              "prompt_attack",
+              "leave_zh",
+              "sku_alpha",
+              "harbor_schedule",
+              "harbor_budget"
+            ],
+            "sparse": [
+              "sku_alpha",
+              "leave_zh"
+            ],
+            "rrf": [
+              "sku_alpha",
+              "leave_zh",
+              "security_en",
+              "prompt_attack",
+              "harbor_schedule",
+              "harbor_budget"
+            ],
+            "rerank": [
+              "security_en",
+              "leave_zh",
+              "harbor_schedule",
+              "harbor_budget",
+              "sku_alpha",
+              "prompt_attack"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "security_en"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 304.911,
+          "trace_complete": true,
+          "run_id": "run_0d_Ka64h-ES9"
+        },
+        {
+          "sequence": 3,
+          "id": "cross-2",
+          "category": "en_to_zh",
+          "question": "What is the maximum operating temperature of ZX-417?",
+          "answerable": true,
+          "expected_answer": "85°C",
+          "expected_document_keys": [
+            "sku_alpha"
+          ],
+          "stage_orders": {
+            "dense": [
+              "sku_alpha",
+              "prompt_attack",
+              "security_en",
+              "harbor_schedule",
+              "harbor_budget",
+              "leave_zh"
+            ],
+            "sparse": [
+              "harbor_schedule",
+              "sku_alpha"
+            ],
+            "rrf": [
+              "sku_alpha",
+              "harbor_schedule",
+              "prompt_attack",
+              "security_en",
+              "harbor_budget",
+              "leave_zh"
+            ],
+            "rerank": [
+              "sku_alpha",
+              "prompt_attack",
+              "security_en",
+              "leave_zh",
+              "harbor_schedule",
+              "harbor_budget"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "sku_alpha"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": true,
+          "latency_ms": 327.707,
+          "trace_complete": true,
+          "run_id": "run_JAGl4rtMnTNP"
+        },
+        {
+          "sequence": 4,
+          "id": "multi-1",
+          "category": "cross_language_multihop",
+          "question": "蓝港计划的预算和执行期限分别是多少？",
+          "answerable": true,
+          "expected_answer": "八百万元；eighteen months",
+          "expected_document_keys": [
+            "harbor_budget",
+            "harbor_schedule"
+          ],
+          "stage_orders": {
+            "dense": [
+              "harbor_budget",
+              "harbor_schedule",
+              "prompt_attack",
+              "leave_zh",
+              "security_en",
+              "sku_alpha"
+            ],
+            "sparse": [
+              "harbor_budget",
+              "prompt_attack",
+              "sku_alpha"
+            ],
+            "rrf": [
+              "harbor_budget",
+              "prompt_attack",
+              "sku_alpha",
+              "harbor_schedule",
+              "leave_zh",
+              "security_en"
+            ],
+            "rerank": [
+              "harbor_budget",
+              "harbor_schedule",
+              "security_en",
+              "prompt_attack",
+              "leave_zh",
+              "sku_alpha"
+            ]
+          },
+          "route": "single_pass_rag",
+          "rounds": 1,
+          "cited_document_keys": [
+            "harbor_budget",
+            "harbor_schedule"
+          ],
+          "evidence_hit": true,
+          "all_expected_evidence_cited": true,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 332.816,
+          "trace_complete": true,
+          "run_id": "run_-GnhSv20S11e"
+        },
+        {
+          "sequence": 5,
+          "id": "null-1",
+          "category": "unanswerable",
+          "question": "蓝港计划的负责人是谁？",
+          "answerable": false,
+          "expected_answer": "",
+          "expected_document_keys": [],
+          "stage_orders": {
+            "dense": [
+              "harbor_budget",
+              "harbor_schedule",
+              "prompt_attack",
+              "leave_zh",
+              "sku_alpha",
+              "security_en"
+            ],
+            "sparse": [
+              "harbor_budget",
+              "prompt_attack",
+              "sku_alpha"
+            ],
+            "rrf": [
+              "harbor_budget",
+              "prompt_attack",
+              "sku_alpha",
+              "harbor_schedule",
+              "leave_zh",
+              "security_en"
+            ],
+            "rerank": [
+              "harbor_schedule",
+              "harbor_budget",
+              "prompt_attack",
+              "security_en",
+              "sku_alpha",
+              "leave_zh"
+            ]
+          },
+          "route": "insufficient_evidence",
+          "rounds": 2,
+          "cited_document_keys": [
+            "harbor_schedule",
+            "harbor_budget",
+            "prompt_attack"
+          ],
+          "evidence_hit": false,
+          "all_expected_evidence_cited": false,
+          "answer_or_citation_contains_gold": false,
+          "latency_ms": 601.641,
+          "trace_complete": true,
+          "run_id": "run_1nWK8ixHseqS"
+        }
+      ]
+    }
+  ]
+}

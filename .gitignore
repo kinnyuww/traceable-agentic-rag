@@ -1,0 +1,25 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+data/
+models/
+secrets/
+*.sqlite3
+*.db
+node_modules/
+
+# Local product notes can contain machine-specific paths and are not part of
+# the public v0.1 release artifacts.
+docs/kinnyu/
