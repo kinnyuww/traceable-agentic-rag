@@ -123,6 +123,20 @@ Parsing and index construction are jobs. Production callers must poll job
 status instead of sleeping for a fixed duration. An index becomes the active
 knowledge-base version only after a successful atomic build.
 
+The build request can freeze both strategy axes:
+
+```json
+{
+  "activate": true,
+  "chunk_strategy": "auto",
+  "dense_backend": "auto"
+}
+```
+
+Use `structure|semantic` and `exact|hnsw` to create controlled A/B index
+versions. The Web UI exposes the same choices; both entry paths call this REST
+contract.
+
 ## Shared data flow
 
 ```text

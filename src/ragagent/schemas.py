@@ -108,6 +108,8 @@ class JobRead(BaseModel):
 class IndexBuildRequest(BaseModel):
     contextualize: bool = False
     activate: bool = True
+    chunk_strategy: Literal["auto", "structure", "semantic"] | None = None
+    dense_backend: Literal["auto", "exact", "hnsw"] | None = None
 
 
 class IndexBuildResponse(BaseModel):

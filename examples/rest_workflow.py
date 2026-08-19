@@ -128,7 +128,12 @@ async def build_and_query(args: argparse.Namespace) -> dict[str, Any]:
 
         build = await client.post(
             f"{base_url}/v1/knowledge-bases/{knowledge_base['id']}/index-builds",
-            json={"contextualize": False, "activate": True},
+            json={
+                "contextualize": False,
+                "activate": True,
+                "chunk_strategy": args.chunk_strategy,
+                "dense_backend": args.dense_backend,
+            },
         )
         build.raise_for_status()
         build_request = build.json()
@@ -185,6 +190,12 @@ def parse_args() -> argparse.Namespace:
     build_parser.add_argument("--name", required=True)
     build_parser.add_argument("--description", default="Created through REST API")
     build_parser.add_argument("--question")
+    build_parser.add_argument(
+        "--chunk-strategy", choices=("auto", "structure", "semantic"), default="auto"
+    )
+    build_parser.add_argument(
+        "--dense-backend", choices=("auto", "exact", "hnsw"), default="auto"
+    )
     build_parser.add_argument("documents", nargs="+", type=Path)
     return parser.parse_args()
 

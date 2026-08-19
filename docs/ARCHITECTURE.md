@@ -34,28 +34,33 @@ flowchart LR
    content-addressed object.
 3. A parse job extracts sections and preserves page/section/character location.
    Its complete stage history is stored in `job_events`.
-4. The structure-aware chunker keeps document, section, page, overlap, and
-   source offsets. v0.1 does not claim to implement LLM-generated Contextual
-   Retrieval summaries; requesting `contextualize=true` fails explicitly.
-   The exact 1100-character target, 160-character overlap, boundary rules and
-   known limitations are documented in [CHUNKING_STRATEGY.md](CHUNKING_STRATEGY.md).
+4. The adaptive chunker keeps document, section, page, overlap, and source
+   offsets. Meaningful Markdown/DOCX headings stay on the deterministic
+   structure path; long generic TXT/PDF sections use embedding-based semantic
+   breakpoints. It does not generate evidence-like summaries;
+   `contextualize=true` still fails explicitly. Exact rules are documented in
+   [CHUNKING_STRATEGY.md](CHUNKING_STRATEGY.md).
 5. Qwen3-Embedding generates 1024-dimensional vectors. SQLite FTS5 stores a
    parallel BM25 index, including Latin tokens and Chinese character/bigram
    terms.
-6. Chunks, source locations, vectors, the document manifest, model identity and
-   index configuration are persisted under a new immutable index-version ID.
+6. Chunks, source locations, vectors, the document manifest, model identity,
+   requested/resolved chunk strategy and dense backend are persisted under a
+   new immutable index-version ID. Small indexes use a cached exact cosine
+   matrix; selected large indexes also create a persisted USearch HNSW sidecar.
 7. The index is activated atomically only after all chunks have been embedded
    and persisted successfully.
 
-The v0.1 dense store performs exact cosine search. This is intentional for
-small local collections and diagnostic correctness; an HNSW/Qdrant adapter is
-the scale-out boundary.
+Dense search is selectable per index: `exact`, `hnsw`, or `auto`. Auto keeps
+exact cosine below 100,000 chunks and chooses HNSW at/above the boundary.
+SQLite FTS5 BM25 remains the parallel sparse channel in every mode. See
+[DENSE_SEARCH_STRATEGY.md](DENSE_SEARCH_STRATEGY.md) for score semantics,
+HNSW/IVF tradeoffs and the local benchmark.
 
 ## 3. Online bounded agent path
 
 ```mermaid
 flowchart TD
-  Q[Question] --> Help{Greeting or product help?}
+  Q[Question] --> Help{Deterministic query understanding}
   Help -- yes --> Direct[Deterministic product help]
   Help -- no --> R1[Round 1: dense + BM25]
   R1 --> RRF[RRF fusion k=60]
@@ -78,6 +83,14 @@ knowledge-base fact question performs first-pass retrieval. The fast path is a
 single deterministic hybrid retrieval when its evidence clears the gate. Only
 weak or multi-facet evidence triggers the second round. Budgets are two rounds,
 four subqueries, and one final answer call.
+
+The initial query-understanding stage is deliberately deterministic and traced.
+It recognizes only exact product-help/greeting intents, ambiguity patterns and
+single-hop/multi-hop markers. A normal knowledge question is sent unchanged to
+round-1 hybrid retrieval; no LLM is spent merely to paraphrase it. The trace
+records method, matched markers, ambiguity, question type, unchanged first
+query and retry policy. Only after the Evidence Gate requests retry may the
+bounded planner rewrite/decompose the query.
 
 After reranking Top 6, the system deterministically classifies the question as
 single-hop or multi-hop with `_looks_multihop`. It constructs one evidence set
@@ -125,6 +138,8 @@ set and generation must judge source content and corroboration.
 - `documents`: immutable uploads, hash, parse status and source artifact.
 - `index_versions`: immutable config and document manifest.
 - `chunks` + `chunks_fts`: source text, location, dense vector and BM25 data.
+- `data/vector-indexes`: rebuildable HNSW graph and chunk-ID manifest for index
+  versions whose resolved backend is HNSW.
 - `jobs` + `job_events`: current state and historical ingestion/evaluation
   events.
 - `runs` + `trace_events`: answer, route, metrics and ordered online trace.

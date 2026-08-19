@@ -52,8 +52,17 @@ def test_dialog_javascript_has_explicit_open_close_and_reset_paths() -> None:
 
 def test_frontend_assets_are_cache_busted() -> None:
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
-    assert 'styles.css?v=0.1.2' in html
-    assert 'app.js?v=0.1.2' in html
+    assert 'styles.css?v=0.1.3' in html
+    assert 'app.js?v=0.1.3' in html
+
+
+def test_index_strategy_controls_are_sent_to_the_api() -> None:
+    elements = frontend_elements()
+    assert elements["chunk-strategy"][0] == "select"
+    assert elements["dense-backend"][0] == "select"
+    javascript = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+    assert 'chunk_strategy: $("#chunk-strategy").value' in javascript
+    assert 'dense_backend: $("#dense-backend").value' in javascript
 
 
 def test_demo_questions_are_discoverable_and_fill_the_composer() -> None:

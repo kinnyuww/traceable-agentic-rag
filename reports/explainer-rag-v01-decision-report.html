@@ -281,6 +281,11 @@
       <h1>先把证据地基做稳，<br>再谈自进化。</h1>
       <p class="lede">这不是一份 RAG 入门，也不再解释 Docker 和 REST。它只回答四件事：现在的数据怎样流动、SQLite 到底怎样搜、chunk 到底怎样切、v0.1 发布前最值得修什么。</p>
 
+      <div class="card" style="margin-top:24px;border-left:5px solid var(--warning)">
+        <strong>2026-08-19 实现更新</strong>
+        <p class="small">本页保留“为什么要改”的决策快照；其中 Exact-only 与 structure_v1 已升级为可选择 Exact/HNSW 和 structure-first semantic fallback。当前实现、真实模型 smoke 与新取舍见 <a href="ADAPTIVE_CHUNKING_AND_DENSE_SEARCH.md">《自适应 Chunk 与可选择 Dense Search 升级报告》</a>。</p>
+      </div>
+
       <div class="verdict">
         <div>
           <strong>结论：架构方向正确，但首要短板已经不在 Agent。</strong>
@@ -357,7 +362,7 @@
             <p class="eyebrow">02 · SQLite & retrieval</p>
             <h2>“SQL 搜索”其实只做了一半</h2>
           </div>
-          <p>SQLite 负责存储和 FTS5/BM25 关键词召回；向量相似度并不是 SQL 算的，而是把当前索引版本的全部向量读进 Python/NumPy 后做精确余弦排序。</p>
+          <p>SQLite 负责存储和 FTS5/BM25 关键词召回；Dense 现在可按不可变索引版本选择缓存 Exact matrix 或持久化 USearch HNSW，Auto 默认小库 Exact、大库 HNSW。</p>
         </div>
 
         <div class="lens-tabs" role="tablist" aria-label="选择检索镜头">
@@ -370,7 +375,7 @@
           <div class="lens-visual">
             <div class="search-stack" aria-hidden="true">
               <div class="search-node active" data-node="fts">SQLite FTS5 / BM25 · Top 20</div>
-              <div class="search-node" data-node="dense">NumPy exact cosine · Top 20</div>
+              <div class="search-node" data-node="dense">Exact matrix / USearch HNSW · Top 20</div>
               <div class="search-node" data-node="rrf">RRF(k=60) · Top 12</div>
               <div class="search-node" data-node="rerank">Qwen reranker · Top 6</div>
             </div>
@@ -396,7 +401,7 @@
         <table class="fact-table" style="margin-top:22px">
           <thead><tr><th>实现事实</th><th>现在的好处</th><th>边界 / 风险</th><th>判断</th></tr></thead>
           <tbody>
-            <tr><td>Dense 对当前版本全部 chunk 做精确余弦</td><td>小库上是正确性很强的参照，不受 ANN 近似误差影响</td><td>每次查询约为 <code>O(N×d)</code>，且要从 SQLite 解码所有向量</td><td class="status good">v0.1 保留</td></tr>
+            <tr><td>Dense 可选缓存 Exact matrix 或持久化 HNSW</td><td>Exact 保留完整召回 oracle；HNSW 提供规模路径</td><td>HNSW 必须对 Exact 测 Recall@K；Auto 阈值需按真实 P95/内存校准</td><td class="status good">已实现</td></tr>
             <tr><td>FTS 的 <code>text</code> 同时含文件名、章节、页码和正文</td><td>无需 LLM 就能给 chunk 增加一点局部语境</td><td>BM25 无法对标题/章节/正文分别加权，通用文件名可能制造噪声</td><td class="status warn">建议拆字段</td></tr>
             <tr><td><code>index_version_id</code> 在 FTS5 中是 <code>UNINDEXED</code></td><td>结果仍会按不可变版本过滤</td><td>历史版本很多时可能扩大 FTS 扫描范围；需要用多版本压测确认</td><td class="status warn">先压测</td></tr>
             <tr><td>SQL 使用 <code>bm25()</code> 排序</td><td>语义明确、结果正确</td><td>SQLite 官方说明 <code>ORDER BY rank</code> 在带 LIMIT 时可能更快</td><td class="status good">小优化</td></tr>
@@ -405,7 +410,7 @@
         </table>
 
         <div class="callout warning" style="margin-top:20px">
-          <strong>最重要的判断：</strong> 现在还不需要为了“主流”就换向量数据库。先定义真实规模门槛并压测；在小型本地知识库里，精确余弦是很好的质量基线。真正应先修的是 document scope、字段权重和解析缺口。
+          <strong>最重要的判断：</strong> 现在仍不需要为了“主流”就强制换向量数据库。系统已提供本地 HNSW，但 2 万向量实测仍是缓存 Exact 更快，因此 Auto 保守地在 10 万 chunk 后才切换。真正门槛应由领域 Recall@K、P95、内存和并发决定。
         </div>
       </div>
     </section>
@@ -417,7 +422,7 @@
             <p class="eyebrow">03 · Chunking</p>
             <h2>结构优先、字符预算、确定性上下文</h2>
           </div>
-          <p>当前 <code>structure_v1</code> 不是 LLM 语义切块，也不是 Anthropic Contextual Retrieval。它先尊重章节/页，再在章节内按约 1100 字符切割，重叠约 160 字符。</p>
+          <p>当前 <code>adaptive_v2</code> 先尊重章节/页：有意义标题走结构句界，长通用 TXT/PDF section 复用本地 embedding 找语义断点；目标约 1100、最大 1600、重叠约 160 字符。</p>
         </div>
 
         <div class="card">
@@ -451,16 +456,16 @@
 
         <div style="margin-top:22px">
           <details open>
-            <summary>P0：中文句界存在一个真实缺口</summary>
-            <p>当前句界规则要求 <code>。！？.!?</code> 后还要有空白。典型中文是“第一句。第二句。”，标点后没有空格，因此常常无法在句末切开，只能依赖空行或 1100 字符硬切。应为中英文分别设计边界规则，并增加数字、小数、缩写的回归测试。</p>
+            <summary>已修：中文句界不再要求标点后有空白</summary>
+            <p><code>。！？</code> 可以直接形成边界；英文句点只在空白或结尾前切分，避免把 <code>3.14</code> 当成两句。结构与语义路径都有回归测试。</p>
           </details>
           <details>
             <summary>P0：表格与扫描件是“原文存在，但检索永远找不到”的典型根因</summary>
             <p>DOCX 表格未进入 section，扫描 PDF 没有 OCR。此时 reranker、Gate、查询改写都无法修复，因为证据从未进入索引。失败归因必须先区分 parse miss，再谈 retrieval miss。</p>
           </details>
           <details>
-            <summary>P1：为什么不立刻把 LLM 语义切块设为默认</summary>
-            <p>它会增加索引时间、API 成本、隐私面和不可重复性，也可能把生成式误读写入检索语料。更稳的顺序是：先修结构/表格/句界，再做 chunk 网格实验，最后把 Contextual Retrieval 作为不可变索引配置的候选实验。</p>
+            <summary>已实现：语义边界检测；仍不默认生成 chunk 摘要</summary>
+            <p>Auto 对弱结构长段使用现有本地 embedding 做相邻句窗差异，不改写原文。生成式 Contextual Retrieval 仍是独立候选，因为摘要会增加成本、隐私面和证据污染风险。</p>
           </details>
           <details>
             <summary>P1：parent-child / sentence-window 值得怎样试</summary>
@@ -659,8 +664,8 @@
       dense: {
         active: ["dense"],
         title: "语义镜头：NumPy 精确余弦",
-        text: "查询通过本地 embedding 服务转成向量；当前不可变索引版本的全部 chunk 向量从 SQLite 读出、归一化，再在 Python 中精确点积排序。",
-        points: ["不是 SQLite vector extension", "没有 ANN 近似损失", "代价随 chunk 数量线性增长"]
+        text: "查询通过本地 embedding 服务转成向量；当前不可变索引版本选择缓存 NumPy Exact matrix 或持久化 USearch HNSW。请求值、解析值、参数与延迟进入配置和 trace。",
+        points: ["Exact 是 Recall oracle", "HNSW 用近似召回换规模", "Auto 默认 10 万 chunk 以下 Exact"]
       },
       hybrid: {
         active: ["fts", "dense", "rrf", "rerank"],
@@ -696,7 +701,7 @@
       later: {
         note: "这些方向不是坏，而是目前缺少触发条件。提前引入会扩大排障面，让 v0.1 更难理解。",
         items: [
-          ["L1", "ANN / 专用向量库", "只有 exact dense 的 P95 延迟或内存超过既定门槛时，再比较 HNSW、Qdrant、pgvector 等。", "触发：规模"],
+          ["L1", "ANN / 专用向量库", "本地 HNSW 已作为可选后端；只有并发、过滤或运维边界出现后，再比较 Qdrant、pgvector、IVF。", "HNSW 已实现"],
           ["L2", "GraphRAG", "只有数据确实以实体关系跨文档传播、且 hybrid RAG 反复失败时再引入。", "触发：关系型问题"],
           ["L3", "在线自动调参", "先有稳定 failure labels、离线回放和审批边界，否则系统可能对偶然样例过拟合。", "触发：Harness"],
           ["L4", "HITL self-tuning", "先把人的纠正结构化为问题、期望证据、答案与归因，而不是直接修改生产参数。", "触发：反馈数据"],

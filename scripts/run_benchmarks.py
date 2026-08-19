@@ -401,6 +401,7 @@ async def run_suite(suite: BenchmarkSuite, settings: Settings) -> dict[str, Any]
         stages = {event.stage for event in run.trace}
         complete = {
             "query_received",
+            "query_understanding",
             "retrieval_round",
             "evidence_gate",
             "run_completed",

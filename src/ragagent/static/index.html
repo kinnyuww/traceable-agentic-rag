@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="本地、可追踪的 Agentic RAG 应用" />
     <title>Traceable RAG</title>
-    <link rel="stylesheet" href="./styles.css?v=0.1.2" />
+    <link rel="stylesheet" href="./styles.css?v=0.1.3" />
   </head>
   <body>
     <div class="shell">
@@ -79,6 +79,26 @@
               </div>
               <button class="secondary" id="build-index-button" type="button">建立新索引版本</button>
             </div>
+            <div class="index-settings" aria-label="索引策略">
+              <label>
+                <span>分块策略</span>
+                <select id="chunk-strategy">
+                  <option value="auto" selected>Auto · 结构优先，弱结构语义补偿</option>
+                  <option value="structure">Structure · 纯结构/句界基线</option>
+                  <option value="semantic">Semantic · 强制语义断点</option>
+                </select>
+                <small>语义模式复用本地 embedding，只在离线建索引时增加计算。</small>
+              </label>
+              <label>
+                <span>Dense 搜索</span>
+                <select id="dense-backend">
+                  <option value="auto" selected>Auto · 小库 Exact，大库 HNSW</option>
+                  <option value="exact">Exact · 精确余弦，质量基线</option>
+                  <option value="hnsw">HNSW · 低延迟近似检索</option>
+                </select>
+                <small>选择会固化进新的不可变索引版本，并出现在检索 trace。</small>
+              </label>
+            </div>
             <label class="dropzone" id="dropzone" role="button" tabindex="0">
               <input id="file-input" type="file" multiple accept=".pdf,.docx,.md,.markdown,.txt" />
               <span class="drop-icon">⇧</span>
@@ -124,6 +144,6 @@
     </dialog>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script type="module" src="./app.js?v=0.1.2"></script>
+    <script type="module" src="./app.js?v=0.1.3"></script>
   </body>
 </html>

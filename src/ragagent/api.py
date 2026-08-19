@@ -132,6 +132,8 @@ def create_index_build(
             knowledge_base_id=knowledge_base_id,
             contextualize=payload.contextualize,
             activate=payload.activate,
+            chunk_strategy=payload.chunk_strategy,
+            dense_backend=payload.dense_backend,
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

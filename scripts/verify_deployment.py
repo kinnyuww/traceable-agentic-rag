@@ -83,6 +83,7 @@ async def main_async(args: argparse.Namespace) -> None:
         trace_stages = [event["stage"] for event in run["trace"]]
         required = {
             "query_received",
+            "query_understanding",
             "retrieval_round",
             "evidence_gate",
             "context_selection",

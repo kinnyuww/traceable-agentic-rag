@@ -52,6 +52,19 @@ class Settings(BaseSettings):
     evidence_single_hop_limit: int = Field(default=4, ge=1, le=6)
     evidence_multi_hop_limit: int = Field(default=6, ge=1, le=6)
 
+    dense_default_backend: Literal["auto", "exact", "hnsw"] = "auto"
+    dense_auto_hnsw_min_chunks: int = Field(default=100000, ge=1)
+    hnsw_connectivity: int = Field(default=32, ge=2, le=128)
+    hnsw_expansion_add: int = Field(default=512, ge=16, le=1024)
+    hnsw_expansion_search: int = Field(default=512, ge=10, le=1024)
+
+    chunk_default_strategy: Literal["auto", "structure", "semantic"] = "auto"
+    chunk_target_chars: int = Field(default=1100, ge=128, le=8000)
+    chunk_overlap_chars: int = Field(default=160, ge=0, le=2000)
+    semantic_breakpoint_percentile: float = Field(default=90.0, ge=50.0, le=99.9)
+    semantic_min_chars: int = Field(default=320, ge=64, le=4000)
+    semantic_max_chars: int = Field(default=1600, ge=256, le=12000)
+
     @property
     def database_path(self) -> Path:
         return self.data_dir / "ragagent.sqlite3"
@@ -63,6 +76,10 @@ class Settings(BaseSettings):
     @property
     def artifacts_dir(self) -> Path:
         return self.data_dir / "artifacts"
+
+    @property
+    def vector_indexes_dir(self) -> Path:
+        return self.data_dir / "vector-indexes"
 
     @model_validator(mode="after")
     def validate_model_endpoints(self) -> Settings:
@@ -76,6 +93,12 @@ class Settings(BaseSettings):
             raise ValueError("Single-hop evidence limit cannot exceed rerank_k")
         if self.evidence_multi_hop_limit > self.rerank_k:
             raise ValueError("Multi-hop evidence limit cannot exceed rerank_k")
+        if self.chunk_overlap_chars >= self.chunk_target_chars:
+            raise ValueError("Chunk overlap must be smaller than the target size")
+        if self.semantic_min_chars > self.chunk_target_chars:
+            raise ValueError("Semantic minimum size cannot exceed the chunk target")
+        if self.semantic_max_chars < self.chunk_target_chars:
+            raise ValueError("Semantic maximum size cannot be smaller than the chunk target")
         return self
 
 

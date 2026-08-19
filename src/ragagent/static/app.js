@@ -241,7 +241,12 @@ async function buildIndex() {
     const result = await api(`/v1/knowledge-bases/${state.activeKnowledgeBase.id}/index-builds`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contextualize: false, activate: true }),
+      body: JSON.stringify({
+        contextualize: false,
+        activate: true,
+        chunk_strategy: $("#chunk-strategy").value,
+        dense_backend: $("#dense-backend").value,
+      }),
     });
     showJobBanner("索引任务已排队");
     await pollJob(result.job_id, async () => { toast("新索引已激活"); });

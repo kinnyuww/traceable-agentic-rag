@@ -5,8 +5,14 @@ from docx import Document as DocxDocument
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
-from ragagent.chunking import chunk_document
-from ragagent.documents import DocumentError, parse_document, safe_filename
+from ragagent.chunking import chunk_document, chunk_document_adaptive
+from ragagent.documents import (
+    DocumentError,
+    ParsedDocument,
+    ParsedSection,
+    parse_document,
+    safe_filename,
+)
 
 
 def test_markdown_parser_preserves_sections_and_offsets(tmp_path: Path) -> None:
@@ -83,3 +89,80 @@ def test_corrupt_pdf_reports_parse_failure(tmp_path: Path) -> None:
     path.write_bytes(b"not a pdf")
     with pytest.raises(DocumentError, match="PDF could not be opened"):
         parse_document("doc_broken", path.name, path)
+
+
+class _SemanticEmbedding:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        self.calls += 1
+        midpoint = len(texts) // 2
+        return [
+            [1.0, 0.0] if index < midpoint else [0.0, 1.0]
+            for index in range(len(texts))
+        ]
+
+
+@pytest.mark.asyncio
+async def test_auto_chunking_uses_semantic_breakpoints_for_weak_structure() -> None:
+    text = "苹果是水果。香蕉也是水果。果园需要浇水。量子芯片用于计算。光子芯片传输数据。处理器需要散热。"
+    parsed = ParsedDocument(
+        document_id="doc_weak",
+        filename="notes.txt",
+        sections=[
+            ParsedSection(
+                text=text,
+                page=None,
+                section="Document",
+                start_char=0,
+                end_char=len(text),
+            )
+        ],
+    )
+    embedding = _SemanticEmbedding()
+    result = await chunk_document_adaptive(
+        parsed,
+        embedding,
+        strategy="auto",
+        target_chars=30,
+        overlap_chars=4,
+        semantic_breakpoint_percentile=80,
+        semantic_min_chars=10,
+        semantic_max_chars=50,
+    )
+    assert embedding.calls == 1
+    assert result.diagnostics["resolved_strategy"] == "semantic"
+    assert result.diagnostics["semantic_breakpoints"] >= 1
+    assert any(chunk.text.endswith("果园需要浇水。") for chunk in result.chunks)
+
+
+@pytest.mark.asyncio
+async def test_auto_chunking_keeps_meaningful_heading_on_structure_path() -> None:
+    text = "第一句说明规则。第二句补充条件。第三句说明例外。第四句说明流程。"
+    parsed = ParsedDocument(
+        document_id="doc_structured",
+        filename="guide.md",
+        sections=[
+            ParsedSection(
+                text=text,
+                page=None,
+                section="退款规则",
+                start_char=0,
+                end_char=len(text),
+            )
+        ],
+    )
+    embedding = _SemanticEmbedding()
+    result = await chunk_document_adaptive(
+        parsed,
+        embedding,
+        strategy="auto",
+        target_chars=20,
+        overlap_chars=3,
+        semantic_min_chars=8,
+        semantic_max_chars=30,
+    )
+    assert embedding.calls == 0
+    assert result.diagnostics["resolved_strategy"] == "structure"
+    assert all(chunk.text.endswith("。") for chunk in result.chunks)

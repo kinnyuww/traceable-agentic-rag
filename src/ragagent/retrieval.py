@@ -7,6 +7,7 @@ from typing import Any
 import numpy as np
 
 from ragagent.config import Settings
+from ragagent.dense_index import DenseIndexManager
 from ragagent.models import EmbeddingClient, LexicalRerankClient, RerankClient, query_coverage
 from ragagent.repositories import Repository
 from ragagent.schemas import RetrievalHit, SourceLocation
@@ -28,11 +29,13 @@ class HybridRetriever:
         embedding_client: EmbeddingClient,
         rerank_client: RerankClient,
         settings: Settings,
+        dense_index: DenseIndexManager,
     ):
         self.repository = repository
         self.embedding_client = embedding_client
         self.rerank_client = rerank_client
         self.settings = settings
+        self.dense_index = dense_index
 
     async def retrieve(
         self,
@@ -44,8 +47,10 @@ class HybridRetriever:
     ) -> RetrievalResult:
         started = time.perf_counter()
         index_id = self.repository.resolve_index_id(knowledge_base_id, index_version_id)
-        dense_rows = self.repository.load_dense_chunks(index_id)
-        if not dense_rows:
+        index_record = self.repository.get_index_record(index_id)
+        index_config = index_record["config"]
+        dense_backend = index_config.get("dense_backend_resolved", "exact")
+        if index_record["chunk_count"] <= 0:
             return RetrievalResult(
                 index_version_id=index_id,
                 query=query,
@@ -55,6 +60,11 @@ class HybridRetriever:
                     "dense_candidates": [],
                     "sparse_candidates": [],
                     "fused_candidates": [],
+                    "dense_search": {
+                        "requested_backend": index_config.get("dense_backend_requested", "exact"),
+                        "backend": dense_backend,
+                        "indexed_chunks": 0,
+                    },
                 },
             )
 
@@ -65,21 +75,23 @@ class HybridRetriever:
         if query_norm:
             query_vector /= query_norm
 
-        dense_ranked: list[tuple[str, float]] = []
-        for row in dense_rows:
-            vector = row["embedding"]
-            norm = float(np.linalg.norm(vector))
-            score = float(np.dot(query_vector, vector / norm)) if norm else 0.0
-            dense_ranked.append((row["id"], score))
-        dense_ranked.sort(key=lambda item: item[1], reverse=True)
-        dense_ranked = dense_ranked[: self.settings.retrieve_dense_k]
+        dense_started = time.perf_counter()
+        dense_result = self.dense_index.search(
+            index_id=index_id,
+            backend=dense_backend,
+            query_vector=query_vector,
+            limit=self.settings.retrieve_dense_k,
+        )
+        dense_latency_ms = (time.perf_counter() - dense_started) * 1000
+        dense_ranked = dense_result.ranked
 
         sparse_rows = self.repository.sparse_search(
             index_id, query, self.settings.retrieve_sparse_k
         )
         sparse_ranked = [(row["id"], float(row["bm25_score"])) for row in sparse_rows]
 
-        row_by_id = {row["id"]: row for row in dense_rows}
+        row_by_id = {row["id"]: row for row in dense_result.rows}
+        row_by_id.update({row["id"]: row for row in sparse_rows})
         dense_score_by_id = dict(dense_ranked)
         sparse_score_by_id = dict(sparse_ranked)
         fused_scores: dict[str, float] = {}
@@ -168,7 +180,12 @@ class HybridRetriever:
             },
             "stage_latency_ms": {
                 "embedding": round(embedding_latency_ms, 3),
+                "dense_search": round(dense_latency_ms, 3),
                 "rerank": round(rerank_latency_ms, 3),
+            },
+            "dense_search": {
+                "requested_backend": index_config.get("dense_backend_requested", "exact"),
+                **dense_result.diagnostics,
             },
             "model_retry_counts": {
                 "embedding": int(getattr(self.embedding_client, "last_retry_count", 0)),

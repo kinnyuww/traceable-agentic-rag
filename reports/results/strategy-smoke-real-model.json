@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-08-19T11:54:09+00:00",
+  "kind": "semantic_hnsw_real_model_black_box",
+  "knowledge_base_id": "kb_VzK2pxccU9km",
+  "index_version_id": "idx_PML62tfFHEJn",
+  "run_id": "run_PwZziMTW15nW",
+  "input": {
+    "document": "README.md",
+    "chunk_strategy": "semantic",
+    "dense_backend": "hnsw",
+    "question": "Auto Dense 默认在多少个 chunk 后切换到 HNSW？"
+  },
+  "index": {
+    "status": "active",
+    "chunker": "adaptive_v2",
+    "resolved_chunk_strategy": "hybrid",
+    "chunks": 17,
+    "semantic_windows_embedded": 6,
+    "semantic_breakpoints": 1,
+    "embedding_model": "ai/qwen3-embedding:0.6B-F16",
+    "embedding_dimensions": 1024,
+    "dense_backend_resolved": "hnsw",
+    "hnsw": {
+      "connectivity": 32,
+      "expansion_add": 512,
+      "expansion_search": 512
+    },
+    "build_latency_ms": 3416.985
+  },
+  "query": {
+    "route": "single_pass_rag",
+    "rounds": 1,
+    "answer_contains_expected_threshold": true,
+    "answer": "Auto Dense 默认在超过 10 万 chunk 后切换到 HNSW；10 万 chunk 以下保留 Exact。",
+    "dense_backend_in_trace": "hnsw",
+    "dense_search_latency_ms": 1.745,
+    "total_latency_ms": 13189.523,
+    "query_understanding_method": "deterministic_rules_v1",
+    "gate_generation_citation_ids_match": true
+  },
+  "observed_degradation": {
+    "component": "reranker",
+    "error": "HTTP 500",
+    "fallback": "LexicalRerankClient",
+    "rerank_stage_latency_ms": 7648.779,
+    "note": "The fallback was trace-visible and the grounded answer remained correct; reranker reliability is a separate follow-up."
+  }
+}

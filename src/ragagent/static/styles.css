@@ -16,10 +16,10 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; color: var(--ink); background: var(--paper); min-height: 100vh; }
-button, input, textarea { font: inherit; }
+button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: wait; opacity: .55; }
-button:focus-visible, input:focus-visible, textarea:focus-visible, [role="button"]:focus-visible {
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [role="button"]:focus-visible {
   outline: 3px solid rgba(44,132,92,.28);
   outline-offset: 2px;
 }
@@ -101,6 +101,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [role="button
 
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 27px 28px 18px; }
 .section-heading h2 { margin: 0; font: 650 25px/1.2 Georgia, serif; }
+.index-settings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 0 28px 18px; padding: 15px; background: #f7faf8; border: 1px solid var(--line); border-radius: 13px; }
+.index-settings label { display: grid; gap: 6px; color: #40524a; font-size: 12px; font-weight: 750; }
+.index-settings select { width: 100%; padding: 9px 10px; color: var(--ink); background: white; border: 1px solid #c8d3cd; border-radius: 9px; }
+.index-settings small { color: var(--muted); font-size: 10px; font-weight: 450; line-height: 1.45; }
 .dropzone { display: grid; place-items: center; margin: 0 28px 22px; padding: 38px 20px; color: var(--muted); text-align: center; background: #fafbf9; border: 1.5px dashed #b8c8c0; border-radius: 14px; transition: .18s ease; }
 .dropzone:hover, .dropzone.dragging { color: var(--green); background: #eff8f3; border-color: #4f9875; }
 .dropzone input { display: none; }
@@ -162,6 +166,7 @@ dialog input:user-invalid, dialog textarea:user-invalid { border-color: var(--re
   .topbar { align-items: flex-start; }
   .index-pill { max-width: 190px; }
   .panel { min-height: 560px; border-radius: 14px; }
+  .index-settings { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

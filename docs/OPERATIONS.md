@@ -68,7 +68,7 @@ UV_CACHE_DIR=/tmp/ragagent-uv-cache uv run --no-sync python \
 ```
 
 This creates a timestamped smoke-test knowledge base in the persistent volume,
-uploads and indexes a Markdown fixture, checks a cited query and its six trace
+uploads and indexes a Markdown fixture, checks a cited query and its seven trace
 stages, runs two concurrent queries, and submits a two-example evaluation.
 
 Run the fixed public diagnostic after downloading the two datasets-server
@@ -101,10 +101,17 @@ versions and original objects are local. Stop API and worker containers before
 taking a filesystem-consistent manual backup. v0.1 deliberately has no delete
 endpoint or automated destructive migration.
 
-## Known scaling boundary
+## Dense scaling controls
 
-Exact dense search loads the active version's vectors and is appropriate for
-the local MVP and diagnostic corpora. Before large production corpora, replace
-the dense repository adapter with HNSW/Qdrant/pgvector, add tenant/RBAC policy,
-stream uploads, and benchmark concurrency. The REST and trace schemas can stay
+Index builds accept `dense_backend=auto|exact|hnsw`. Exact mode caches a
+normalized matrix per immutable index instead of decoding SQLite BLOBs on every
+request. Auto switches to persisted USearch HNSW at 100,000 chunks by default;
+override `RAG_DENSE_AUTO_HNSW_MIN_CHUNKS` after measuring domain Recall@20,
+P95 latency and memory against Exact. HNSW parameters are exposed through the
+`RAG_HNSW_*` settings and frozen into the index config. See
+[DENSE_SEARCH_STRATEGY.md](DENSE_SEARCH_STRATEGY.md).
+
+For multi-tenant/public deployments, a sidecar local graph is not enough: add
+tenant/RBAC policy, filtered-ANN recall tests, streaming uploads and a managed
+Qdrant/pgvector adapter as appropriate. The REST and trace schemas can remain
 stable.

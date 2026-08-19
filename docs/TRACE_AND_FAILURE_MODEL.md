@@ -16,10 +16,10 @@ in the prompt, or ignored by generation?”
 | Object store | partial write or path traversal | safe basename; SHA-256 object path | duplicate and filename tests | atomic temporary-file replace |
 | PDF/DOCX/TXT parse | corrupt file, encoding error, missing extractable text | job `parsing` event; parser; section/character counts; error | parser fixtures; manual source inspection | document becomes `failed` |
 | OCR/table/layout | information exists visually but parser never sees it | zero/low extracted characters and source metadata | operator review; future layout benchmark | explicitly unsupported in v0.1 |
-| Chunk boundary | answer split across chunks, oversized/noisy chunks | index config, ordinal, section/page and offsets | gold-evidence hit by chunk; boundary fixtures | structure + sentence boundaries + overlap |
+| Chunk boundary | answer split across chunks, semantic breakpoint drift, oversized/noisy chunks | requested/resolved strategy, semantic breakpoint counts, ordinal, section/page and offsets | gold-evidence hit by chunk; boundary fixtures; structure/semantic ablation | structure-first + weak-structure semantic fallback + bounded overlap |
 | Context enrichment | summary omits or invents a fact, or doubles cost | index `contextualize` config | contextual-vs-baseline offline experiment | LLM contextual summaries explicitly unavailable in v0.1 |
 | Embedding | endpoint unavailable, dimension mismatch, drift, local request accidentally routed through a system proxy | provider/model, dimension, retry count, job error | real-model smoke; dimension and local proxy-bypass assertions | bypass proxy for local hosts; transient retry; otherwise fail index/query |
-| Dense retrieval | semantic miss, multilingual weakness, exact-search cost | ordered chunk IDs and cosine scores | Hit@K, MRR@10, Recall@10, nDCG@10 | keep dense candidates for trace |
+| Dense retrieval | semantic miss, multilingual weakness, exact-search cost, ANN recall loss | backend/exact flag, cache, HNSW parameters, ordered chunk IDs, cosine scores and latency | Hit@K, MRR@10, Recall@10, nDCG@10; HNSW-vs-exact recall | keep dense candidates and backend for trace |
 | Sparse retrieval | synonym miss, tokenizer mismatch, identifier sensitivity | ordered BM25 candidates and scores | same metrics; dense/BM25 ablation | Unicode + Chinese char/bigram terms |
 | Fusion | relevant item demoted by rank combination | RRF candidates/scores, k=60 | stage-by-stage metrics | rank-based RRF avoids score calibration |
 | Reranker | model cold start/503, truncation, domain mismatch, relevant item demotion | provider, retry count, latency, scores, fallback/error | pre/post-rerank delta | bounded retry; lexical fallback |
@@ -40,6 +40,8 @@ in the prompt, or ignored by generation?”
 Ordered stages are intentionally human-readable JSON:
 
 - `query_received`: question, knowledge base, immutable index and budgets.
+- `query_understanding`: deterministic method, no-LLM flag, ambiguity,
+  single/multi-hop markers, unchanged round-1 query and bounded retry policy.
 - `retrieval_round`: query; every dense, sparse, RRF and final candidate;
   chunk ID、document ID、文件名、页/章节位置和分数；counts；model
   providers；retry counts；stage and total latency；reranker degradation。

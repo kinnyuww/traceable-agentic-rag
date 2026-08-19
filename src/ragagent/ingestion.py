@@ -6,8 +6,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ragagent.chunking import chunk_document
+from ragagent.chunking import chunk_document_adaptive
 from ragagent.config import Settings
+from ragagent.dense_index import DenseIndexManager
 from ragagent.documents import (
     DocumentError,
     ParsedDocument,
@@ -94,12 +95,22 @@ class IngestionService:
         knowledge_base_id: str,
         contextualize: bool = False,
         activate: bool = True,
+        chunk_strategy: str | None = None,
+        dense_backend: str | None = None,
     ) -> tuple[str, JobRead]:
+        selected_chunk_strategy = chunk_strategy or self.settings.chunk_default_strategy
+        selected_dense_backend = dense_backend or self.settings.dense_default_backend
         config = {
-            "chunker": "structure_v1",
-            "target_chars": 1100,
-            "overlap_chars": 160,
+            "chunker": "adaptive_v2",
+            "chunk_strategy_requested": selected_chunk_strategy,
+            "target_chars": self.settings.chunk_target_chars,
+            "overlap_chars": self.settings.chunk_overlap_chars,
+            "semantic_breakpoint_percentile": self.settings.semantic_breakpoint_percentile,
+            "semantic_min_chars": self.settings.semantic_min_chars,
+            "semantic_max_chars": self.settings.semantic_max_chars,
             "contextualize": contextualize,
+            "dense_backend_requested": selected_dense_backend,
+            "dense_auto_hnsw_min_chunks": self.settings.dense_auto_hnsw_min_chunks,
             "embedding_provider": self.settings.embedding_provider,
             "embedding_model": self.settings.embedding_model or "deterministic-feature-hash-v1",
         }
@@ -121,10 +132,12 @@ class JobProcessor:
         repository: Repository,
         ingestion: IngestionService,
         embedding_client: EmbeddingClient,
+        dense_index: DenseIndexManager,
     ):
         self.repository = repository
         self.ingestion = ingestion
         self.embedding_client = embedding_client
+        self.dense_index = dense_index
         self.agent_service: Any | None = None
 
     async def process(self, job: JobRead) -> None:
@@ -218,6 +231,7 @@ class JobProcessor:
             raise ConflictError("No parsed documents are ready for indexing")
         drafts: list[dict[str, Any]] = []
         manifest: list[dict[str, Any]] = []
+        chunking_diagnostics: list[dict[str, Any]] = []
         for position, record in enumerate(records, start=1):
             artifact_path = Path(record["artifact_path"])
             parsed = ParsedDocument.from_path(artifact_path)
@@ -228,9 +242,27 @@ class JobProcessor:
                     "version": record["version"],
                 }
             )
-            for draft in chunk_document(parsed):
+            chunk_result = await chunk_document_adaptive(
+                parsed,
+                self.embedding_client,
+                strategy=index_config["chunk_strategy_requested"],
+                target_chars=index_config["target_chars"],
+                overlap_chars=index_config["overlap_chars"],
+                semantic_breakpoint_percentile=index_config[
+                    "semantic_breakpoint_percentile"
+                ],
+                semantic_min_chars=index_config["semantic_min_chars"],
+                semantic_max_chars=index_config["semantic_max_chars"],
+            )
+            chunking_diagnostics.append(
+                {"document_id": record["id"], **chunk_result.diagnostics}
+            )
+            for draft in chunk_result.chunks:
                 stable = hashlib.sha256(
-                    f"{record['id']}:{record['version']}:{draft.ordinal}:{draft.text}".encode()
+                    (
+                        f"{index_id}:{record['id']}:{record['version']}:"
+                        f"{draft.ordinal}:{draft.text}"
+                    ).encode()
                 ).hexdigest()[:20]
                 drafts.append(
                     {
@@ -251,6 +283,18 @@ class JobProcessor:
         if not drafts:
             raise DocumentError("No chunks were produced from the ready documents")
 
+        dense_backend = self.dense_index.resolve_backend(
+            index_config["dense_backend_requested"], len(drafts)
+        )
+        index_config["dense_backend_resolved"] = dense_backend
+        if dense_backend == "hnsw":
+            index_config["hnsw"] = {
+                "connectivity": self.dense_index.settings.hnsw_connectivity,
+                "expansion_add": self.dense_index.settings.hnsw_expansion_add,
+                "expansion_search": self.dense_index.settings.hnsw_expansion_search,
+            }
+        self.repository.update_index_config(index_id, index_config)
+
         batch_size = 32
         for start in range(0, len(drafts), batch_size):
             batch = drafts[start : start + batch_size]
@@ -268,6 +312,10 @@ class JobProcessor:
 
         self.repository.update_job(job.id, stage="persisting", progress=0.9)
         self.repository.replace_index_chunks(index_id, drafts)
+        dense_artifact = None
+        if dense_backend == "hnsw":
+            self.repository.update_job(job.id, stage="building_hnsw", progress=0.95)
+            dense_artifact = self.dense_index.build_hnsw(index_id, drafts)
         self.repository.update_index_status(
             index_id,
             IndexStatus.ACTIVE,
@@ -281,6 +329,11 @@ class JobProcessor:
             "chunks": len(drafts),
             "active": activate,
             "chunker": index_config["chunker"],
+            "chunk_strategy": index_config["chunk_strategy_requested"],
+            "chunking_diagnostics": chunking_diagnostics,
+            "dense_backend_requested": index_config["dense_backend_requested"],
+            "dense_backend_resolved": dense_backend,
+            "dense_artifact": dense_artifact,
             "embedding_provider": index_config["embedding_provider"],
             "embedding_model": index_config["embedding_model"],
             "embedding_dimensions": len(drafts[0]["embedding"]),

@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -9,7 +10,12 @@ from ragagent.retrieval import RetrievalResult
 from ragagent.schemas import RetrievalHit, SourceLocation
 
 
-def make_client(tmp_path: Path, *, threshold: float = 0.52) -> TestClient:
+def make_client(
+    tmp_path: Path,
+    *,
+    threshold: float = 0.52,
+    dense_auto_hnsw_min_chunks: int = 100000,
+) -> TestClient:
     settings = Settings(
         _env_file=None,
         data_dir=tmp_path / "data",
@@ -18,11 +24,17 @@ def make_client(tmp_path: Path, *, threshold: float = 0.52) -> TestClient:
         rerank_provider="lexical",
         llm_enabled=False,
         evidence_threshold=threshold,
+        dense_auto_hnsw_min_chunks=dense_auto_hnsw_min_chunks,
     )
     return TestClient(create_app(settings))
 
 
-def create_indexed_kb(client: TestClient) -> tuple[str, str]:
+def create_indexed_kb(
+    client: TestClient,
+    *,
+    chunk_strategy: str = "auto",
+    dense_backend: str = "auto",
+) -> tuple[str, str]:
     kb_response = client.post(
         "/v1/knowledge-bases",
         json={"name": "员工手册", "description": "测试知识库"},
@@ -50,7 +62,12 @@ def create_indexed_kb(client: TestClient) -> tuple[str, str]:
     assert parse_job["status"] == "succeeded", parse_job
     build = client.post(
         f"/v1/knowledge-bases/{kb_id}/index-builds",
-        json={"contextualize": False, "activate": True},
+        json={
+            "contextualize": False,
+            "activate": True,
+            "chunk_strategy": chunk_strategy,
+            "dense_backend": dense_backend,
+        },
     )
     assert build.status_code == 202, build.text
     index_id = build.json()["index_version_id"]
@@ -124,6 +141,9 @@ def test_upload_index_retrieve_query_and_trace(tmp_path: Path) -> None:
         assert retrieve.status_code == 200, retrieve.text
         assert retrieve.json()["index_version_id"] == index_id
         assert "十天" in retrieve.json()["hits"][0]["text"]
+        index_record = client.get(f"/v1/index-versions/{index_id}").json()
+        assert index_record["config"]["dense_backend_requested"] == "auto"
+        assert index_record["config"]["dense_backend_resolved"] == "exact"
 
         query = client.post(
             "/v1/query",
@@ -142,12 +162,20 @@ def test_upload_index_retrieve_query_and_trace(tmp_path: Path) -> None:
         stages = [event["stage"] for event in run.json()["trace"]]
         assert stages == [
             "query_received",
+            "query_understanding",
             "retrieval_round",
             "context_selection",
             "evidence_gate",
             "answer_generation",
             "run_completed",
         ]
+        understanding = next(
+            event for event in run.json()["trace"] if event["stage"] == "query_understanding"
+        )["payload"]
+        assert understanding["method"] == "deterministic_rules_v1"
+        assert understanding["llm_called"] is False
+        assert understanding["question_type"] == "single-hop"
+        assert understanding["round_1_query"] == "员工每年有多少天年假？"
         retrieval = next(
             event for event in run.json()["trace"] if event["stage"] == "retrieval_round"
         )
@@ -328,6 +356,53 @@ def test_contextual_summary_flag_fails_explicitly_in_v01(tmp_path: Path) -> None
         assert job["status"] == "failed"
         assert "intentionally not implemented" in job["error"]
         assert job["trace"][-1]["stage"] == "failed"
+
+
+def test_hnsw_and_exact_indexes_share_the_same_best_hit(tmp_path: Path) -> None:
+    with make_client(tmp_path) as client:
+        kb_id, hnsw_id = create_indexed_kb(client, dense_backend="hnsw")
+        hnsw_record = client.get(f"/v1/index-versions/{hnsw_id}").json()
+        assert hnsw_record["config"]["dense_backend_requested"] == "hnsw"
+        assert hnsw_record["config"]["dense_backend_resolved"] == "hnsw"
+        assert (tmp_path / "data" / "vector-indexes" / f"{hnsw_id}.usearch").exists()
+
+        exact_build = client.post(
+            f"/v1/knowledge-bases/{kb_id}/index-builds",
+            json={"dense_backend": "exact", "chunk_strategy": "structure"},
+        )
+        exact_job = client.get(f"/v1/jobs/{exact_build.json()['job_id']}").json()
+        assert exact_job["status"] == "succeeded", exact_job
+        exact_id = exact_build.json()["index_version_id"]
+
+        query = "员工每年有多少天年假？"
+        retriever = client.app.state.container.retriever
+        hnsw_result = asyncio.run(
+            retriever.retrieve(
+                knowledge_base_id=kb_id,
+                query=query,
+                index_version_id=hnsw_id,
+            )
+        )
+        exact_result = asyncio.run(
+            retriever.retrieve(
+                knowledge_base_id=kb_id,
+                query=query,
+                index_version_id=exact_id,
+            )
+        )
+        assert hnsw_result.hits[0].text == exact_result.hits[0].text
+        assert hnsw_result.diagnostics["dense_search"]["backend"] == "hnsw"
+        assert hnsw_result.diagnostics["dense_search"]["exact"] is False
+        assert exact_result.diagnostics["dense_search"]["backend"] == "exact"
+        assert exact_result.diagnostics["dense_search"]["exact"] is True
+
+
+def test_auto_dense_backend_resolves_hnsw_at_configured_threshold(tmp_path: Path) -> None:
+    with make_client(tmp_path, dense_auto_hnsw_min_chunks=1) as client:
+        _, index_id = create_indexed_kb(client)
+        record = client.get(f"/v1/index-versions/{index_id}").json()
+        assert record["config"]["dense_backend_requested"] == "auto"
+        assert record["config"]["dense_backend_resolved"] == "hnsw"
 
 
 class _FailingEmbedding:

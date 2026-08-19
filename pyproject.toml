@@ -17,6 +17,7 @@ dependencies = [
   "pypdf>=6,<7",
   "python-docx>=1.2,<2",
   "python-multipart>=0.0.20,<1",
+  "usearch>=2.26,<3",
   "uvicorn[standard]>=0.35,<1",
 ]
 

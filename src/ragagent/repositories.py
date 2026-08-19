@@ -191,6 +191,17 @@ class Repository:
         payload["document_manifest"] = decode_json(payload.pop("document_manifest_json"), [])
         return payload
 
+    def update_index_config(self, index_id: str, config: dict[str, Any]) -> None:
+        row = self.db.fetch_one("SELECT status FROM index_versions WHERE id=?", (index_id,))
+        if not row:
+            raise NotFoundError(f"Index version {index_id!r} was not found")
+        if row["status"] not in {IndexStatus.QUEUED.value, IndexStatus.BUILDING.value}:
+            raise ConflictError("An active or failed index version cannot be reconfigured")
+        self.db.execute(
+            "UPDATE index_versions SET config_json=? WHERE id=?",
+            (encode_json(config), index_id),
+        )
+
     def resolve_index_id(self, kb_id: str, requested: str | None = None) -> str:
         kb = self.get_knowledge_base(kb_id)
         index_id = requested or kb.active_index_version_id
@@ -304,6 +315,22 @@ class Repository:
             )
             result.append(payload)
         return result
+
+    def load_chunks_by_ids(self, index_id: str, chunk_ids: list[str]) -> list[dict[str, Any]]:
+        if not chunk_ids:
+            return []
+        placeholders = ",".join("?" for _ in chunk_ids)
+        rows = self.db.fetch_all(
+            f"SELECT * FROM chunks WHERE index_version_id=? AND id IN ({placeholders})",
+            (index_id, *chunk_ids),
+        )
+        by_id: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            payload = dict(row)
+            payload["source"] = decode_json(payload.pop("source_json"), {})
+            payload.pop("embedding", None)
+            by_id[payload["id"]] = payload
+        return [by_id[chunk_id] for chunk_id in chunk_ids if chunk_id in by_id]
 
     def sparse_search(self, index_id: str, query: str, limit: int) -> list[dict[str, Any]]:
         terms = lexical_terms(query)

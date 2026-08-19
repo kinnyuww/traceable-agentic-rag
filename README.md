@@ -11,7 +11,7 @@ Agentic RAG。v0.1 的重点不是声称“自动进化”，而是先把数据�
 路由、证据、回答与评测变成可复现的工程基线。
 
 已在 Apple M1 Pro 32 GB 上完成真实模型和 Docker 验证：文档上传与解析、
-结构化切块、不可变索引版本、dense + BM25 + RRF 混合检索、Qwen rerank、
+自适应结构/语义切块、不可变索引版本、Exact/HNSW dense + BM25 + RRF 混合检索、Qwen rerank、
 有界二轮 Agentic 检索、引用回答、逐阶段 trace、离线评测和 Web UI 均可运行。
 
 ## v0.1 的定位
@@ -40,6 +40,8 @@ Agentic RAG。v0.1 的重点不是声称“自动进化”，而是先把数据�
   同一数据库、对象存储、索引、RAG Core 和 run trace。
 - **Agentic 行为有边界**：什么时候第二轮、为什么停止、为何澄清或拒答都有明确
   状态和预算，适合后续做失败归因与受控实验。
+- **索引策略可选择但不失去基线**：每个不可变索引可以选 `auto / exact / hnsw`
+  和 `auto / structure / semantic`；请求值、解析值、参数和耗时都进入配置或 trace。
 
 ## 一个系统，三条使用入口
 
@@ -100,6 +102,8 @@ secret 文件或进程环境注入，不能写入仓库、镜像、浏览器或 
 
 在网页中新建知识库，上传 PDF、DOCX、Markdown 或 UTF-8 TXT，等待解析完成，
 建立并激活索引，然后直接问答、查看引用和运行轨迹。适合个人或领域专家操作。
+建索引前可选择分块与 Dense 搜索策略；默认 Auto 对有标题的结构化资料保留结构，
+对长 TXT/PDF 弱结构段落使用本地 embedding 语义断点，小库使用 Exact，大库使用 HNSW。
 
 ```text
 打开 /app/
@@ -190,6 +194,16 @@ create knowledge base
 
 三条路线的完整契约和调用顺序见 [使用模式指南](docs/USAGE_MODES.md)。
 
+API 建索引时也可以显式固化策略：
+
+```json
+{
+  "activate": true,
+  "chunk_strategy": "auto",
+  "dense_backend": "auto"
+}
+```
+
 ## Agent 应该调用 `/query` 还是 `/retrieve`
 
 | 接口 | 系统负责什么 | 上层 Agent 负责什么 |
@@ -201,16 +215,16 @@ create knowledge base
 推荐大多数 Agent 使用 `/v1/query`。只有上层已经拥有严格的证据审核与生成策略时，
 才直接使用 `/v1/retrieve`，否则很容易绕开本项目最重要的 Gate 和拒答能力。
 
-## 当前切块基线
+## 当前自适应切块
 
-v0.1 采用确定性的结构感知切块：先按 PDF 页、DOCX/Markdown 标题或文本 section
-解析，再在 section 内优先寻找段落/句子边界，目标约 1100 字符、重叠约 160
-字符。每个 chunk 保存文档、页码、章节、字符 offset 和 ordinal，并把结构信息
-作为本地 `contextual_text` 加入 embedding、BM25 和 rerank。
+`auto` 先尊重 PDF 页、DOCX/Markdown 标题等 parser 硬边界：有意义的标题走确定性
+结构/句界切分；长 `Document`/`Page N` 弱结构段落复用本地 embedding，按相邻句窗
+余弦差异的百分位寻找主题断点。目标约 1100 字符、最大 1600、重叠约 160；中文
+`。！？` 不再要求后面有空格。原文、offset 和引用不被生成模型改写。
 
-它不是 LLM 语义切块，也没有把 Anthropic-style Contextual Retrieval 冒充为已
-实现功能。现有边界、中文长文本风险和后续候选实验详见
-[切块策略说明](docs/CHUNKING_STRATEGY.md)。
+这里的“语义”是离线边界检测，不是生成式摘要。Anthropic-style Contextual
+Retrieval 仍作为独立的后续实验，避免让 Gate 把模型生成文本误当原始证据。算法、
+回退路径和失稳面见 [切块策略说明](docs/CHUNKING_STRATEGY.md)。
 
 ## 模型与运行边界
 
@@ -219,8 +233,8 @@ v0.1 采用确定性的结构感知切块：先按 PDF 页、DOCX/Markdown 标�
 - 本地推理：Docker Model Runner 的 llama.cpp 引擎；Apple Silicon 使用 Metal
 - 生成：OpenAI-compatible 适配器；当前验证配置为 DeepSeek 官方
   `deepseek-v4-flash`
-- Dense store：v0.1 使用精确 cosine search，适合本地基线与诊断；大规模部署的
-  替换边界是 HNSW/Qdrant/pgvector adapter
+- Dense store：每个索引选择 `exact / hnsw / auto`。Exact 使用缓存的归一化矩阵；
+  HNSW 使用持久化 USearch 图；Auto 默认 10 万 chunk 以下保留 Exact
 
 生成模型可关闭；失败时系统保留可引用的抽取式降级。配置见
 [本地运维指南](docs/OPERATIONS.md)。
@@ -249,7 +263,8 @@ v0.1 采用确定性的结构感知切块：先按 PDF 页、DOCX/Markdown 标�
 
 - v0.1 是可追踪、可评测的 baseline，不宣称已经在线自进化。
 - DOCX 表格、OCR、复杂 PDF 布局和多模态尚未进入稳定解析路径。
-- Dense 当前为精确余弦检索，适合本地小中型知识库；尚未承诺百万 chunk 规模。
+- Auto 的 10 万 chunk 阈值是保守起点，不是通用真理；生产环境必须用自己的查询
+  集比较 HNSW 对 Exact 的 Recall@K、P95、内存和并发。
 - 生成启用时，最终 Evidence Set 会发送到配置的外部 DeepSeek endpoint；私有材料
   的部署者必须自行确认数据出境策略。
 - 当前没有多租户、RBAC 和公网部署安全层，不应把端口直接暴露到互联网。
@@ -258,18 +273,22 @@ v0.1 采用确定性的结构感知切块：先按 PDF 页、DOCX/Markdown 标�
 ## 验证与报告
 
 - [v0.1 工程决策报告：SQL 检索、Chunk 策略与优化顺序](reports/explainer-rag-v01-decision-report.html)
+- [自适应 Chunk 与可选择 Dense Search 升级报告](reports/ADAPTIVE_CHUNKING_AND_DENSE_SEARCH.md)
 - [多颗粒度框架与心智模型报告](reports/AGENTIC_RAG_FRAMEWORK_MENTAL_MODEL.md)
 - [交互式 Agentic RAG 心智模型](reports/explainer-agentic-rag-mental-model.html)
 - [真实示例导入与 Ragas 评测报告](reports/LIVE_DEMO_AND_RAGAS_EVALUATION.md)
 - [粗糙知识库：故障实验室与逐层定位指南](reports/FAILURE_LAB_GUIDE.md)
 - [完整设计与评测报告](reports/TRACEABLE_AGENTIC_RAG_V0.1_REPORT.md)
 - [系统架构](docs/ARCHITECTURE.md)
+- [Dense / SQLite 搜索策略](docs/DENSE_SEARCH_STRATEGY.md)
+- [自适应分块策略](docs/CHUNKING_STRATEGY.md)
 - [不稳定面与 Trace 契约](docs/TRACE_AND_FAILURE_MODEL.md)
 - [Docker 黑盒结果](reports/results/docker-e2e.json)
 - [QASPER / MultiHop-RAG / 双语控制集结果](reports/results/public-benchmark-real-model.json)
 - [MIRACL-zh 结果](reports/results/miracl-zh-real-model.json)
+- [Semantic + HNSW 真实模型 smoke](reports/results/strategy-smoke-real-model.json)
 
-当前 EvidenceSet 改造的回归结果为 Ruff 全通过、pytest `34 passed`。粗糙知识库
+当前回归结果为 Ruff 全通过、pytest `39 passed`。粗糙知识库
 用于暴露失败而不是制造漂亮分数：答案文本可正确但完整证据链仍可能不干净，这正是
 trace、拒答和后续 Harness Engineering 存在的原因。
 

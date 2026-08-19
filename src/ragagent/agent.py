@@ -242,6 +242,11 @@ class AgentService:
                 },
             },
         )
+        self.repository.append_trace(
+            run_id,
+            "query_understanding",
+            _query_understanding_trace(question),
+        )
         rounds = 1
         first = await self._retrieve_or_fail(
             run_id=run_id,
@@ -744,6 +749,10 @@ def _looks_ambiguous(question: str) -> bool:
 
 
 def _looks_multihop(question: str) -> bool:
+    return bool(_matched_multihop_markers(question))
+
+
+def _matched_multihop_markers(question: str) -> list[str]:
     markers = (
         "分别",
         "比较",
@@ -759,7 +768,26 @@ def _looks_multihop(question: str) -> bool:
         "how does",
     )
     lowered = question.lower()
-    return any(marker in lowered for marker in markers)
+    return [marker for marker in markers if marker in lowered]
+
+
+def _query_understanding_trace(question: str) -> dict[str, Any]:
+    markers = _matched_multihop_markers(question)
+    question_type = "multi-hop" if markers else "single-hop"
+    return {
+        "method": "deterministic_rules_v1",
+        "llm_called": False,
+        "route_intent": "knowledge_base_retrieval",
+        "question_type": question_type,
+        "matched_multihop_markers": markers,
+        "ambiguous": _looks_ambiguous(question),
+        "round_1_query": question,
+        "round_1_action": "hybrid_retrieval_without_rewrite",
+        "retry_policy": (
+            "If the evidence gate requests retry, deterministically split/rewrite or use the "
+            "configured chat planner, with at most four round-2 subqueries."
+        ),
+    }
 
 
 def _deterministic_subqueries(question: str, limit: int) -> list[str]:

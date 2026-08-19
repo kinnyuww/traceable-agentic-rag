@@ -1,89 +1,103 @@
-# Chunking Strategy in v0.1
+# Adaptive Chunking Strategy
 
-## What is implemented
+## Mental model
 
-v0.1 uses a deterministic, structure-aware baseline. It is deliberately easy
-to replay and diagnose before semantic or LLM-generated chunking is introduced.
+Chunking is an offline indexing decision, not an online Agent loop:
 
 ```text
-document parser
-  → PDF page / DOCX heading / Markdown heading / plain-text document
-  → section-local split
-  → paragraph or sentence boundary when available
-  → ~1100-character target with 160-character overlap
-  → source offsets + local structural context
-  → embedding and BM25 indexing
+parser hard boundary
+  → decide section mode
+      ├─ meaningful heading: structure/sentence split
+      └─ weak structure: embedding-based semantic breakpoint
+  → bounded chunk (~1100 chars, max 1600, overlap ~160)
+  → original offsets + deterministic source context
+  → embedding + BM25
 ```
 
-The implementation is in [`src/ragagent/chunking.py`](../src/ragagent/chunking.py).
+The parser still supplies hard parent boundaries: Markdown/DOCX headings, PDF
+pages, or a TXT document. The chunker never joins unrelated parser sections and
+never replaces source text with generated text.
 
-## Exact rules
+## Three selectable modes
 
-1. Parse first, chunk second. The chunker never receives an unstructured byte
-   stream; it receives `ParsedSection` objects with document ID, filename,
-   section title, page number when available, and character offsets.
-2. Never cross a parser section boundary. A Markdown heading, a DOCX heading,
-   or a PDF page is therefore a hard parent boundary in v0.1.
-3. Keep any section at or below 1100 characters as one chunk.
-4. For a longer section, choose the last blank-line or sentence boundary before
-   the 1100-character target. If no such boundary exists, use a hard character
-   cut.
-5. Start the next chunk roughly 160 characters before the previous end, then
-   move to the next whitespace when possible. The overlap protects facts that
-   straddle a boundary.
-6. Persist absolute `start_char` and `end_char` offsets, page/section metadata,
-   ordinal, filename and document ID for every chunk.
-7. Prefix the searchable representation with deterministic local context such
-   as `Document: handbook.md | Section: Leave policy | Page: 2`. Dense
-   embedding, BM25 and reranking see this context plus the original chunk, but
-   citations still quote the original source text.
-
-The baseline uses characters rather than tokenizer-specific token counts. That
-keeps chunk IDs and boundaries stable when a model provider changes, and is
-simple for mixed Chinese/English documents. It is not claimed to be optimal.
-
-## What “contextual” does and does not mean here
-
-The `contextual_text` field currently contains source structure only: document,
-section and page. v0.1 does **not** call an LLM to write a document-level summary
-for every chunk and does not claim to implement Anthropic-style Contextual
-Retrieval. An index request with `contextualize=true` fails explicitly instead
-of silently pretending the feature exists.
-
-## Known instability surfaces
-
-- Long Chinese prose often has no whitespace after `。！？`. The current
-  boundary expression may therefore fall back to a hard 1100-character cut.
-- A PDF page is a hard boundary, so evidence split across pages is not joined
-  by the chunker.
-- DOCX tables, OCR text, layout relations, code syntax trees and images are not
-  represented by the baseline parser.
-- One target size is used for every document type and query type.
-- Overlap can improve recall while increasing duplicate candidates and prompt
-  cost.
-- Structural prefixes help retrieval but are not a substitute for full
-  document-level semantic context.
-
-Each issue is observable through parse jobs, immutable index configuration,
-candidate traces, source offsets and fixed evaluations. This makes the baseline
-useful for controlled experiments rather than hiding the choices inside a
-framework default.
-
-## Candidate experiments for the Harness phase
-
-These are candidates, not v0.1 claims:
-
-| Candidate | Hypothesis | Required evaluation |
+| Build option | Behavior | Best use |
 |---|---|---|
-| Chinese-aware punctuation boundaries | Fewer mid-sentence cuts | gold evidence recall, duplication, chunk length distribution |
-| Token-aware size by embedding model | Better use of model context | Recall@K, latency, index size |
-| Parent-child retrieval | Small chunks recall, larger parents answer | evidence recall and faithfulness |
-| LLM contextual summaries | Better ambiguous/local chunk recall | contextual vs baseline ablation, cost, hallucination audit |
-| Semantic breakpoint chunking | Topic-coherent chunks | boundary benchmark and downstream retrieval delta |
-| Table/layout-aware parsing | Recover facts such as `HT-8842` | parser coverage and cell-level citations |
-| Code AST or domain-specific splitters | Preserve executable/domain units | domain gold set, not generic preference |
+| `structure` | paragraph/sentence boundaries inside every parser section | replayable baseline, well-structured Markdown/DOCX |
+| `semantic` | force semantic breakpoint analysis for every long section | weak headings or topic-dense prose experiments |
+| `auto` | meaningful headings use structure; generic `Document`/`Page N` sections use semantic analysis | default mixed corpus |
 
-No candidate should replace the active strategy based on one user complaint.
-The Harness phase should build a candidate index, run development and sealed
-regression sets, compare quality/cost/latency, and require human approval before
-promotion.
+All modes keep sections at or below 1100 characters intact. Long sections use
+a 1100-character target and roughly 160 characters of sentence-aligned overlap.
+Semantic chunks also have a 320-character minimum and 1600-character maximum.
+Every chunk preserves filename, document ID, section/page, ordinal and absolute
+character offsets.
+
+## Semantic breakpoint algorithm
+
+For a long weakly structured section:
+
+1. Find multilingual sentence and paragraph boundaries. Chinese `。！？` no
+   longer require following whitespace; English periods split only before
+   whitespace/end, avoiding decimal points such as `3.14`.
+2. Create a one-sentence context buffer on both sides of every sentence.
+3. Embed those windows with the same configured local embedding model used by
+   retrieval. No additional online LLM call or new model service is required.
+4. Compute cosine dissimilarity between adjacent windows.
+5. Treat distances at/above the configured 90th percentile as topic-change
+   candidates.
+6. Choose a semantic candidate nearest the target size while respecting the
+   minimum/maximum bounds. If there is no usable candidate, fall back to the
+   normal sentence boundary and finally a hard size cap.
+
+The approach follows the same basic pattern as LlamaIndex's semantic splitter:
+embed buffered sentences, measure adjacent dissimilarity, and select percentile
+breakpoints. The local implementation adds parser hard boundaries and explicit
+size limits so a noisy document cannot create unbounded chunks.
+
+## What contextual text means
+
+`contextual_text` remains deterministic source metadata:
+
+```text
+Document: handbook.md | Section: Refund policy | Page: 4
+```
+
+It is used as a retrieval hint by embedding, BM25 and reranking. Citations and
+Evidence Gate source coverage use the original chunk text. The existing
+`contextualize=true` switch still fails explicitly because Anthropic-style
+generated chunk summaries have a different risk profile: a generated summary
+can omit, distort or invent evidence. If added later, it should be a separate
+immutable index experiment, labeled as a non-evidence retrieval hint and tested
+for recall, cost and hallucinated retrieval cues.
+
+## Trace and reproducibility
+
+The immutable index config stores the requested strategy, target, overlap,
+semantic percentile and min/max sizes. The index job result records, per
+document and section:
+
+- resolved `structure` or `semantic` mode and reason;
+- number of semantic windows embedded and breakpoints selected;
+- chunk count and length distribution;
+- source section/page and input character count.
+
+This makes a missed answer attributable to parsing, boundary choice, embedding,
+retrieval or later stages instead of hiding the split behind a framework.
+
+## Known boundaries
+
+- PDF pages remain hard boundaries; cross-page parent/child expansion is not yet
+  implemented.
+- DOCX tables, OCR, complex layouts, code ASTs and images still require better
+  parsers before chunking can recover their evidence.
+- Semantic splitting adds offline embedding work and can be unstable if the
+  embedding model changes; that model identity is therefore part of the index.
+- A percentile is corpus-relative. It finds unusual transitions but does not
+  guarantee that every transition is meaningful.
+- Chunk quality still requires a gold evidence set and downstream retrieval
+  comparison; visually plausible boundaries are not enough.
+
+## References
+
+- [LlamaIndex semantic splitter API](https://developers.llamaindex.ai/python/framework-api-reference/node_parsers/semantic_splitter/)
+- [Anthropic Contextual Retrieval](https://www.anthropic.com/engineering/contextual-retrieval)

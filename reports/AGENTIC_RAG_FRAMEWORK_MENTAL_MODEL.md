@@ -525,11 +525,11 @@ MCP 层需要新增的是工具描述、鉴权、上传资源语义、流式/轮
 
 ### 15.2 5 分钟版本
 
-系统有离线和在线两条流。离线由 worker 把原件变成带来源位置的 chunk、1024 维向量和 BM25 索引，并发布不可变版本。在线由 API 执行 dense + BM25 + RRF + reranker，随后构建单跳经 floor 后最多 4 个、多跳保留完整 Top 6 的 Evidence Set；Evidence Gate 审核该集合并决定单轮回答、二轮检索、澄清或拒答，放行后同一集合直接交给 DeepSeek。API、worker 和持久 volume 由 Compose 管理；本地 Qwen 模型在宿主 Model Runner，DeepSeek 在外部。
+系统有离线和在线两条流。离线由 worker 按 structure-first / weak-structure semantic fallback 把原件变成带来源位置的 chunk、1024 维向量、BM25，以及按索引选择的缓存 Exact 或持久化 HNSW，并发布不可变版本。在线由 API 执行 dense + BM25 + RRF + reranker，随后构建单跳经 floor 后最多 4 个、多跳保留完整 Top 6 的 Evidence Set；Evidence Gate 审核该集合并决定单轮回答、二轮检索、澄清或拒答，放行后同一集合直接交给 DeepSeek。API、worker 和持久 volume 由 Compose 管理；本地 Qwen 模型在宿主 Model Runner，DeepSeek 在外部。
 
 ### 15.3 工程评审版本
 
-它是一个单机、单 workspace、SQLite WAL 驱动的可观测 RAG runtime。API 和 job worker 共享一个应用镜像与 named volume；检索后端当前以 exact cosine + FTS5 为正确性基线，通过 HTTP 模型适配器调用宿主 llama.cpp/Metal。线上 Agent 是有界状态机，决策和候选级诊断全部持久化，索引不可变且原子激活。下一规模边界是 ANN/vector DB、队列/多 worker、对象存储、多租户权限和可观测性后端，而不是改变 REST 或 Agent 核心契约。
+它是一个单机、单 workspace、SQLite WAL 驱动的可观测 RAG runtime。API 和 job worker 共享一个应用镜像与 named volume；SQLite FTS5 是 sparse 通道，Dense 以缓存 Exact cosine 为正确性 oracle，并可按不可变索引切换到 USearch HNSW，通过 HTTP 模型适配器调用宿主 llama.cpp/Metal。线上 Agent 是有界状态机，决策和候选级诊断全部持久化，索引不可变且原子激活。下一规模边界是 IVF/专用 vector DB、队列/多 worker、对象存储、多租户权限和可观测性后端，而不是改变 REST 或 Agent 核心契约。
 
 ---
 

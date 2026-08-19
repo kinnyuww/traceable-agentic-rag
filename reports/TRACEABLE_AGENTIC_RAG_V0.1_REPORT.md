@@ -344,7 +344,7 @@ python scripts/run_benchmarks.py --qasper ... --multihop ...
 python scripts/run_miracl_benchmark.py --topics ... --qrels ... --corpus-shard ...
 ```
 
-当前完整代码验证为 34 个 pytest 用例全通过。除四类 parser、损坏/空文件、重复上传、异步 job、建库、retrieve/query/trace/eval、两轮边界、contextualize 显式失败、embedding 硬失败、reranker/generation 降级、提示注入尾部过滤、localhost 代理绕过、弹窗退出/缓存/可访问性契约外，还覆盖单跳最多 4 及 floor 降噪、多跳无 floor 保留第 5/6 名证据、低分第 5 名进入第二轮 Gate/生成/引用、联合 coverage、灰区 LLM 接收 6 个证据、rank/score 可信度警示、第二轮合并去重，以及 Gate/生成/citation ID 集合一致性；ruff 通过。Docker 正式 DeepSeek 配置、粗糙库同题回归、三个示例库问答和 Ragas 代表样例另行通过。
+当前完整代码验证为 39 个 pytest 用例全通过。除四类 parser、损坏/空文件、重复上传、异步 job、建库、retrieve/query/trace/eval、两轮边界、contextualize 显式失败、embedding 硬失败、reranker/generation 降级、提示注入尾部过滤、localhost 代理绕过、弹窗退出/缓存/可访问性契约外，还覆盖单跳最多 4 及 floor 降噪、多跳无 floor 保留第 5/6 名证据、低分第 5 名进入第二轮 Gate/生成/引用、联合 coverage、灰区 LLM 接收 6 个证据、rank/score 可信度警示、第二轮合并去重、Gate/生成/citation ID 集合一致性、弱结构语义断点、强结构 Auto 路由、Exact/HNSW 对照、Auto backend 阈值和 Web 策略控件；ruff 通过。Docker 正式 DeepSeek 配置、adaptive_v2 黑盒、强制 Semantic + HNSW 真实模型 smoke、粗糙库同题回归、三个示例库问答和 Ragas 代表样例另行通过。
 
 ## 14. 推荐下一迭代：Harness Engineering v0.2
 
