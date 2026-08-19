@@ -178,7 +178,7 @@ OpenAPI documentation is available at <http://127.0.0.1:8080/docs>.
 6. Pin `index_version_id` for evaluations and replay; omit it in normal use to
    follow the active immutable version.
 7. Do not expose the current local service directly to the public internet;
-   authentication, tenant isolation and rate limiting are outside v0.1.
+   authentication, tenant isolation and rate limiting are outside v0.2.
 
 ## MCP later
 

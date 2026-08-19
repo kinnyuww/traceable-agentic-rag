@@ -222,7 +222,7 @@ class JobProcessor:
         index_config = self.repository.get_index_record(index_id)["config"]
         if index_config.get("contextualize"):
             raise DocumentError(
-                "LLM contextual summaries are intentionally not implemented in v0.1; "
+                "LLM contextual summaries are intentionally not implemented in v0.2; "
                 "use structure-aware context metadata or set contextualize=false"
             )
         self.repository.update_index_status(index_id, IndexStatus.BUILDING)

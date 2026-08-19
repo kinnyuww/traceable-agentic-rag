@@ -98,7 +98,7 @@ private material must still obtain the workspace owner's data-egress approval.
 
 Application data is in the named volume `traceable-rag-agent-data`. Index
 versions and original objects are local. Stop API and worker containers before
-taking a filesystem-consistent manual backup. v0.1 deliberately has no delete
+taking a filesystem-consistent manual backup. v0.2 deliberately has no delete
 endpoint or automated destructive migration.
 
 ## Dense scaling controls

@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
 
+from ragagent import __version__
 from ragagent.documents import DocumentError
 from ragagent.models import ModelServiceError
 from ragagent.repositories import ConflictError, NotFoundError
@@ -45,7 +46,7 @@ def health(request: Request) -> dict:
     container.database.initialize()
     return {
         "status": "ok",
-        "version": "0.1.0",
+        "version": __version__,
         "providers": {
             "embedding": container.settings.embedding_provider,
             "rerank": container.settings.rerank_provider,
@@ -194,6 +195,9 @@ async def query(payload: QueryRequest, request: Request) -> QueryResponse:
             knowledge_base_id=payload.knowledge_base_id,
             question=payload.question,
             index_version_id=payload.index_version_id,
+            conversation_id=payload.conversation_id,
+            memory_turns=payload.memory_turns,
+            retrieval_concurrency=payload.retrieval_concurrency,
         )
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

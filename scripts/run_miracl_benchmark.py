@@ -134,6 +134,7 @@ async def main_async(args: argparse.Namespace) -> None:
             rerank_endpoint=args.rerank_endpoint,
             rerank_model=args.rerank_model,
             llm_enabled=False,
+            chunk_default_strategy=args.chunk_strategy,
         )
         result = await run_suite(suite, settings)
     report = {
@@ -147,6 +148,7 @@ async def main_async(args: argparse.Namespace) -> None:
             "embedding_model": args.embedding_model,
             "rerank_model": args.rerank_model,
             "generation_model": "disabled",
+            "chunk_strategy": args.chunk_strategy,
         },
         "inputs": {
             "topics": {"path": str(args.topics), "sha256": _sha256(args.topics)},
@@ -175,6 +177,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--embedding-model", default="ai/qwen3-embedding:0.6B-F16")
     parser.add_argument("--rerank-endpoint", default="http://localhost:12434/rerank")
     parser.add_argument("--rerank-model", default="ai/qwen3-reranker:0.6B")
+    parser.add_argument(
+        "--chunk-strategy",
+        choices=("auto", "structure", "semantic"),
+        default="auto",
+    )
     return parser.parse_args()
 
 

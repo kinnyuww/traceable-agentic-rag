@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from ragagent import __version__
 from ragagent.api import router
 from ragagent.config import Settings, get_settings
 from ragagent.container import Container
@@ -23,7 +24,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="Traceable Agentic RAG",
-        version="0.1.0",
+        version=__version__,
         summary="Standalone local RAG Agent application and embeddable REST runtime",
         lifespan=lifespan,
     )

@@ -67,7 +67,8 @@ POST knowledge-bases
 2. 点击一个示例问题，它只会填入输入框；
 3. 检查问题无误后点击“发送”；
 4. 先看答案下方的 `route`、轮次、耗时和引用；
-5. 再打开“运行轨迹”，依次查看 `retrieval_round`、`evidence_gate`、`context_selection`、`answer_generation`。
+5. 再打开“运行轨迹”，依次查看 `query_understanding`、各视角的 `retrieval_round`、
+   `retrieval_merge_rerank`、`context_selection`、`evidence_gate`、`answer_generation`。
 
 ### 4.1 第一站：MIRACL 中文检索
 

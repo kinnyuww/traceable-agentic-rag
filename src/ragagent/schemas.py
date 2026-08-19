@@ -149,6 +149,9 @@ class QueryRequest(BaseModel):
     knowledge_base_id: str
     question: str = Field(min_length=1, max_length=8000)
     index_version_id: str | None = None
+    conversation_id: str | None = Field(default=None, min_length=1, max_length=120)
+    memory_turns: int | None = Field(default=None, ge=0, le=10)
+    retrieval_concurrency: int | None = Field(default=None, ge=1, le=4)
     include_trace: bool = True
 
 
@@ -180,6 +183,7 @@ class RunRead(BaseModel):
     id: str
     knowledge_base_id: str
     index_version_id: str | None
+    conversation_id: str | None = None
     question: str
     route: Route | None
     status: str

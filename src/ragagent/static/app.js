@@ -4,6 +4,7 @@ const state = {
   lastRun: null,
   polling: new Set(),
   creatingKnowledgeBase: false,
+  conversationIds: {},
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -73,8 +74,45 @@ async function selectKnowledgeBase(id) {
   $("#workspace-title").textContent = state.activeKnowledgeBase.name;
   updateIndexPill();
   renderKnowledgeBases();
+  conversationIdFor(id);
+  syncConversationControls();
   renderConversationIntro();
   await loadDocuments();
+}
+
+function createConversationId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `conversation-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function conversationIdFor(knowledgeBaseId) {
+  if (!state.conversationIds[knowledgeBaseId]) {
+    state.conversationIds[knowledgeBaseId] = createConversationId();
+  }
+  return state.conversationIds[knowledgeBaseId];
+}
+
+function syncConversationControls() {
+  if (!state.activeKnowledgeBase) return;
+  $("#conversation-id").value = conversationIdFor(state.activeKnowledgeBase.id);
+}
+
+function configuredConversationId() {
+  const knowledgeBaseId = state.activeKnowledgeBase.id;
+  const requested = $("#conversation-id").value.trim();
+  const conversationId = (requested || createConversationId()).slice(0, 120);
+  state.conversationIds[knowledgeBaseId] = conversationId;
+  $("#conversation-id").value = conversationId;
+  return conversationId;
+}
+
+function startNewConversation() {
+  if (!state.activeKnowledgeBase) return;
+  state.conversationIds[state.activeKnowledgeBase.id] = createConversationId();
+  state.lastRun = null;
+  syncConversationControls();
+  renderConversationIntro();
+  toast("已开始新会话，会话记忆已清空");
 }
 
 function exampleQuestions(description = "") {
@@ -273,10 +311,26 @@ async function ask(event) {
   $("#ask-button").disabled = true;
   const pending = appendMessage("assistant", "正在检索、重排并检查证据…", { pending: true });
   try {
+    const requestedMemory = Number.parseInt($("#memory-turns").value, 10);
+    const memoryTurns = Number.isFinite(requestedMemory)
+      ? Math.max(0, Math.min(10, requestedMemory))
+      : 5;
+    $("#memory-turns").value = String(memoryTurns);
+    const requestedConcurrency = Number.parseInt($("#retrieval-concurrency").value, 10);
+    const retrievalConcurrency = Number.isFinite(requestedConcurrency)
+      ? Math.max(1, Math.min(4, requestedConcurrency))
+      : 2;
+    $("#retrieval-concurrency").value = String(retrievalConcurrency);
     const response = await api("/v1/query", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ knowledge_base_id: state.activeKnowledgeBase.id, question }),
+      body: JSON.stringify({
+        knowledge_base_id: state.activeKnowledgeBase.id,
+        question,
+        conversation_id: configuredConversationId(),
+        memory_turns: memoryTurns,
+        retrieval_concurrency: retrievalConcurrency,
+      }),
     });
     pending.remove();
     appendMessage("assistant", response.answer, response);
@@ -370,6 +424,7 @@ function bindEvents() {
   $("#file-input").addEventListener("change", (event) => uploadFiles(event.target.files));
   $("#build-index-button").addEventListener("click", buildIndex);
   $("#query-form").addEventListener("submit", ask);
+  $("#new-conversation-button").addEventListener("click", startNewConversation);
   const dropzone = $("#dropzone");
   ["dragenter", "dragover"].forEach((name) => dropzone.addEventListener(name, (event) => { event.preventDefault(); dropzone.classList.add("dragging"); }));
   ["dragleave", "drop"].forEach((name) => dropzone.addEventListener(name, (event) => { event.preventDefault(); dropzone.classList.remove("dragging"); }));

@@ -134,6 +134,7 @@ def test_upload_index_retrieve_query_and_trace(tmp_path: Path) -> None:
         kb_id, index_id = create_indexed_kb(client)
         health = client.get("/v1/health")
         assert health.status_code == 200
+        assert health.json()["version"] == "0.2.0"
         retrieve = client.post(
             "/v1/retrieve",
             json={"knowledge_base_id": kb_id, "query": "员工每年有多少天年假？"},
@@ -164,6 +165,7 @@ def test_upload_index_retrieve_query_and_trace(tmp_path: Path) -> None:
             "query_received",
             "query_understanding",
             "retrieval_round",
+            "retrieval_merge_rerank",
             "context_selection",
             "evidence_gate",
             "answer_generation",
@@ -172,10 +174,12 @@ def test_upload_index_retrieve_query_and_trace(tmp_path: Path) -> None:
         understanding = next(
             event for event in run.json()["trace"] if event["stage"] == "query_understanding"
         )["payload"]
-        assert understanding["method"] == "deterministic_rules_v1"
+        assert understanding["method"] == "deterministic_rules_v2"
         assert understanding["llm_called"] is False
+        assert understanding["latency_ms"] >= 0
         assert understanding["question_type"] == "single-hop"
-        assert understanding["round_1_query"] == "员工每年有多少天年假？"
+        assert understanding["canonical_query"] == "员工每年有多少天年假？"
+        assert understanding["retrieval_queries"] == ["员工每年有多少天年假？"]
         retrieval = next(
             event for event in run.json()["trace"] if event["stage"] == "retrieval_round"
         )
@@ -183,18 +187,27 @@ def test_upload_index_retrieve_query_and_trace(tmp_path: Path) -> None:
             "dense_candidates",
             "sparse_candidates",
             "fused_candidates",
-            "reranked_candidates",
         ):
             candidate = retrieval["payload"][candidate_group][0]
             assert candidate["document_id"]
             assert candidate["filename"] == "handbook.md"
             assert candidate["section"]
+        assert retrieval["payload"]["reranked_candidates"] == []
         selection = next(
             event for event in run.json()["trace"] if event["stage"] == "context_selection"
         )
         assert len(selection["payload"]["selected_chunks"]) == 1
         assert selection["payload"]["discarded_chunks"]
         gate = next(event for event in run.json()["trace"] if event["stage"] == "evidence_gate")
+        merged = next(
+            event
+            for event in run.json()["trace"]
+            if event["stage"] == "retrieval_merge_rerank"
+        )
+        assert merged["payload"]["canonical_query"] == "员工每年有多少天年假？"
+        assert merged["payload"]["execution"] == "bounded_parallel"
+        assert merged["payload"]["concurrency_limit"] == 2
+        assert merged["payload"]["global_rerank"]["final_count"] > 0
         generation = next(
             event for event in run.json()["trace"] if event["stage"] == "answer_generation"
         )
@@ -238,7 +251,7 @@ def test_agent_stops_after_bounded_second_round(tmp_path: Path) -> None:
         assert gates[-1]["payload"]["decision"] == "retry"
 
 
-def test_low_score_rank_five_is_shared_by_second_gate_generation_and_citations(
+def test_multi_hop_initial_queries_keep_low_rank_cross_document_evidence_for_gate_and_answer(
     tmp_path: Path,
 ) -> None:
     with make_client(tmp_path, threshold=0.10) as client:
@@ -263,30 +276,111 @@ def test_low_score_rank_five_is_shared_by_second_gate_generation_and_citations(
 
         assert response.status_code == 200, response.text
         payload = response.json()
-        assert payload["route"] == "iterative_rag"
-        assert payload["rounds"] == 2
+        assert payload["route"] == "single_pass_rag"
+        assert payload["rounds"] == 1
         run = client.get(payload["trace_url"]).json()
-        second_selection = [
+        selection = [
             event for event in run["trace"] if event["stage"] == "context_selection"
-        ][-1]
-        second_gate = [event for event in run["trace"] if event["stage"] == "evidence_gate"][-1]
+        ][0]
+        gate = [event for event in run["trace"] if event["stage"] == "evidence_gate"][0]
         generation = next(
             event for event in run["trace"] if event["stage"] == "answer_generation"
         )
         selected_ids = [
-            item["chunk_id"] for item in second_selection["payload"]["selected_chunks"]
+            item["chunk_id"] for item in selection["payload"]["selected_chunks"]
         ]
         citation_ids = [citation["chunk_id"] for citation in payload["citations"]]
 
         assert selected_ids == [hit.chunk_id for hit in first_hits] + [rank_five.chunk_id]
         assert selected_ids[4] == rank_five.chunk_id
-        assert second_selection["payload"]["question_type"] == "multi-hop"
-        assert second_selection["payload"]["selection_policy"] == "retain_rerank_top_k"
-        assert second_selection["payload"]["score_floor"] is None
-        assert second_gate["payload"]["audited_chunk_ids"] == selected_ids
+        assert selection["payload"]["question_type"] == "multi-hop"
+        assert selection["payload"]["selection_policy"] == "retain_rerank_top_k"
+        assert selection["payload"]["score_floor"] is None
+        assert gate["payload"]["audited_chunk_ids"] == selected_ids
         assert generation["payload"]["selected_chunks"] == selected_ids
         assert generation["payload"]["citation_chunk_ids"] == selected_ids
         assert citation_ids == selected_ids
+
+
+def test_conversation_memory_is_bounded_and_isolated_by_conversation_id(tmp_path: Path) -> None:
+    with make_client(tmp_path) as client:
+        kb_id, _ = create_indexed_kb(client)
+        first = client.post(
+            "/v1/query",
+            json={
+                "knowledge_base_id": kb_id,
+                "question": "员工每年有多少天年假？",
+                "conversation_id": "conversation-a",
+                "memory_turns": 5,
+            },
+        )
+        assert first.status_code == 200, first.text
+
+        second = client.post(
+            "/v1/query",
+            json={
+                "knowledge_base_id": kb_id,
+                "question": "办公地点在哪里？",
+                "conversation_id": "conversation-a",
+                "memory_turns": 5,
+                "retrieval_concurrency": 3,
+            },
+        )
+        assert second.status_code == 200, second.text
+        second_run = client.get(second.json()["trace_url"]).json()
+        received = next(
+            event for event in second_run["trace"] if event["stage"] == "query_received"
+        )
+        assert received["payload"]["memory_turns"] == 5
+        assert received["payload"]["history_turns_loaded"] == 1
+        assert received["payload"]["budgets"]["retrieval_query_concurrency"] == 3
+        assert (
+            received["payload"]["budgets"]["retrieval_query_concurrency_source"]
+            == "request_override"
+        )
+        merged = next(
+            event
+            for event in second_run["trace"]
+            if event["stage"] == "retrieval_merge_rerank"
+        )
+        assert merged["payload"]["concurrency_limit"] == 3
+        assert second_run["conversation_id"] == "conversation-a"
+
+        isolated = client.post(
+            "/v1/query",
+            json={
+                "knowledge_base_id": kb_id,
+                "question": "办公地点在哪里？",
+                "conversation_id": "conversation-b",
+                "memory_turns": 10,
+            },
+        )
+        isolated_run = client.get(isolated.json()["trace_url"]).json()
+        isolated_received = next(
+            event for event in isolated_run["trace"] if event["stage"] == "query_received"
+        )
+        assert isolated_received["payload"]["history_turns_loaded"] == 0
+
+        invalid = client.post(
+            "/v1/query",
+            json={
+                "knowledge_base_id": kb_id,
+                "question": "办公地点在哪里？",
+                "conversation_id": "conversation-a",
+                "memory_turns": 11,
+            },
+        )
+        assert invalid.status_code == 422
+
+        invalid_concurrency = client.post(
+            "/v1/query",
+            json={
+                "knowledge_base_id": kb_id,
+                "question": "办公地点在哪里？",
+                "retrieval_concurrency": 5,
+            },
+        )
+        assert invalid_concurrency.status_code == 422
 
 
 def test_evaluation_records_runs_and_metrics(tmp_path: Path) -> None:
@@ -450,9 +544,13 @@ def test_reranker_failure_degrades_with_visible_trace(tmp_path: Path) -> None:
         )
         assert response.status_code == 200
         run = client.get(response.json()["trace_url"]).json()
-        retrieval = next(event for event in run["trace"] if event["stage"] == "retrieval_round")
-        assert retrieval["payload"]["rerank_error"]
-        assert retrieval["payload"]["providers"]["rerank"].endswith("(fallback)")
+        global_rerank = next(
+            event
+            for event in run["trace"]
+            if event["stage"] == "retrieval_merge_rerank"
+        )["payload"]["global_rerank"]
+        assert global_rerank["model_error"]
+        assert global_rerank["mode"].endswith("(fallback)")
 
 
 def test_generation_failure_degrades_to_cited_extractive_answer(tmp_path: Path) -> None:

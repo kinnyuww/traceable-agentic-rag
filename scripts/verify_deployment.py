@@ -85,6 +85,7 @@ async def main_async(args: argparse.Namespace) -> None:
             "query_received",
             "query_understanding",
             "retrieval_round",
+            "retrieval_merge_rerank",
             "evidence_gate",
             "context_selection",
             "answer_generation",

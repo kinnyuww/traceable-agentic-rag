@@ -1,38 +1,49 @@
 # Changelog
 
-## 0.1.0 — Traceable and Evaluable Baseline
+All notable changes to Traceable Agentic RAG are recorded here. The project
+uses semantic versioning for public application/API milestones.
 
-Initial public baseline.
+## 0.2.0 - 2026-08-20
 
 ### Added
 
-- Standalone local Web RAG application and versioned REST/OpenAPI service.
-- PDF, DOCX, Markdown and UTF-8 text ingestion with asynchronous job traces.
-- Deterministic structure-aware chunking with source offsets.
-- Immutable index versions with local dense + BM25 + RRF hybrid retrieval.
-- Pluggable embedding, reranking and OpenAI-compatible generation adapters.
-- Bounded Agentic query path with at most two retrieval rounds.
-- Grounded answers, source citations, evidence gating and extractive fallback.
-- Full online traces across retrieval, fusion, reranking, context selection,
-  routing and generation.
-- One pre-gate Evidence Set shared unchanged by sufficiency grading, generation
-  and citations: single-hop applies a dynamic floor and keeps up to four chunks;
-  multi-hop retains the complete reranker Top 6 without tail filtering.
-- Three documented product entry paths: complete Web UI, Web-managed knowledge
-  bases queried by an external Agent, and full REST-managed ingestion/query.
-- Public engineering decision report, failure-lab comparison artifacts and a
-  minimal GitHub CI workflow for Ruff and pytest.
-- Fixed-set evaluation API, public benchmark diagnostics and a Ragas adapter.
-- Docker Compose API/worker deployment and Apple Silicon model-runner profile.
-- Failure lab demonstrating parser, routing, citation and untrusted-context
-  instability even when final answer text remains correct.
-- Three supported operation modes: full Web UI, Web-built/API-consumed, and
-  API-only knowledge-base lifecycle.
+- DeepSeek-backed query understanding with a deterministic fallback,
+  canonical query, single-hop/multi-hop classification, intent, entities,
+  constraints, clarification routing and atomic multi-hop subqueries.
+- Conversation-isolated memory using optional `conversation_id` and bounded
+  `memory_turns`; Web controls for starting a new conversation.
+- Bounded parallel multi-view recall followed by chunk-ID deduplication and a
+  single global rerank against the canonical query.
+- Adaptive `auto / structure / semantic` chunking with structure-first routing,
+  local-embedding semantic breakpoints and traceable strategy diagnostics.
+- Selectable `auto / exact / hnsw` dense search. Exact search caches a
+  normalized matrix; HNSW uses a persisted USearch sidecar.
+- A browser-readable online retrieval execution diagram and expanded benchmark
+  trace support.
 
-### Explicitly deferred
+### Changed
 
-- feedback and expert-label workflow;
-- automatic failure attribution and candidate experiment generation;
-- sealed regression gates, HITL promotion, rollback and constrained
-  self-tuning;
-- MCP adapter, OCR/layout tables, multi-tenancy and RBAC.
+- Rerank still returns Top 6. Single-hop evidence uses the dynamic score floor
+  and keeps at most four chunks; multi-hop retains all valid Top 6 chunks.
+- Evidence Gate, answer generation and citations now share the exact same
+  immutable Evidence Set. There is no post-Gate context reselection.
+- Query-view retrieval is recall-only; all merged candidates are compared once
+  on a common canonical-query rerank scale.
+- Failure-lab and benchmark scripts read the new global-rerank trace stage.
+
+### Known limitations
+
+- Harness Engineering, feedback adjudication, automatic failure attribution,
+  candidate experiments and HITL promotion are not implemented yet.
+- OCR, layout-aware tables, multimodal parsing, multi-tenancy/RBAC and MCP are
+  outside this release.
+- The locally tested Qwen reranker can fail on long pair inputs under the
+  current Docker Model Runner batch limit. The visible lexical fallback keeps
+  the request functional but can add several seconds of latency.
+
+## 0.1.0 - 2026-08-18
+
+- First traceable baseline: Web application, REST API, Docker API/worker,
+  immutable indexes, local embeddings, Dense + BM25 + RRF hybrid retrieval,
+  reranking, bounded two-round Agentic RAG, Evidence Gate, citations, run trace,
+  offline evaluation and failure-lab datasets.

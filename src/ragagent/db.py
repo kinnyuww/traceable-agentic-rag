@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS runs (
     id TEXT PRIMARY KEY,
     knowledge_base_id TEXT NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
     index_version_id TEXT,
+    conversation_id TEXT,
     question TEXT NOT NULL,
     route TEXT,
     status TEXT NOT NULL,
@@ -176,6 +177,17 @@ class Database:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with self.connect() as connection:
                 connection.executescript(SCHEMA)
+                run_columns = {
+                    row["name"] for row in connection.execute("PRAGMA table_info(runs)")
+                }
+                if "conversation_id" not in run_columns:
+                    connection.execute("ALTER TABLE runs ADD COLUMN conversation_id TEXT")
+                connection.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_runs_conversation_created
+                    ON runs(knowledge_base_id, conversation_id, created_at)
+                    """
+                )
             self._initialized = True
 
     def execute(self, sql: str, parameters: Iterable[Any] = ()) -> None:

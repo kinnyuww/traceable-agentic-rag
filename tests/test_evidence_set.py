@@ -4,7 +4,13 @@ from dataclasses import dataclass
 
 import pytest
 
-from ragagent.agent import AgentService, EvidenceGate, _build_evidence_set
+from ragagent.agent import (
+    AgentService,
+    EvidenceGate,
+    QueryUnderstanding,
+    _build_evidence_set,
+    _initial_retrieval_queries,
+)
 from ragagent.config import Settings
 from ragagent.models import ChatResult
 from ragagent.schemas import RetrievalHit, SourceLocation
@@ -40,6 +46,43 @@ def test_single_hop_evidence_set_selects_at_most_four_chunks() -> None:
     assert evidence_set.limit == 4
     assert [hit.chunk_id for hit in evidence_set.hits] == [f"chunk_{index}" for index in range(4)]
     assert [hit.chunk_id for hit in evidence_set.discarded_hits] == ["chunk_4", "chunk_5"]
+
+
+def test_initial_queries_use_two_views_for_rewritten_single_hop_and_subqueries_for_multi() -> None:
+    single = QueryUnderstanding(
+        canonical_query="A项目的报销期限是多少",
+        question_type="single-hop",
+        route="retrieve",
+        intent="fact_lookup",
+        entities=["A项目"],
+        constraints={},
+        subqueries=[],
+        clarification_question=None,
+        confidence=0.9,
+        method="llm",
+    )
+    assert _initial_retrieval_queries("它的报销期限是多少", single, 4) == [
+        "它的报销期限是多少",
+        "A项目的报销期限是多少",
+    ]
+
+    multi = single.__class__(
+        canonical_query="比较A公司和B公司2025年的利润",
+        question_type="multi-hop",
+        route="retrieve",
+        intent="comparison",
+        entities=["A公司", "B公司"],
+        constraints={"time": "2025"},
+        subqueries=["A公司2025年利润", "B公司2025年利润"],
+        clarification_question=None,
+        confidence=0.9,
+        method="llm",
+    )
+    assert _initial_retrieval_queries("它们谁利润更高", multi, 4) == [
+        "比较A公司和B公司2025年的利润",
+        "A公司2025年利润",
+        "B公司2025年利润",
+    ]
 
 
 def test_multi_hop_evidence_set_can_include_rank_five_and_six() -> None:
@@ -183,3 +226,78 @@ async def test_answer_prompt_labels_rank_and_score_as_relevance_hints() -> None:
     prompt = chat.messages[-1]["content"]
     assert 'retrieval_rank="1"' in prompt
     assert 'rerank_score="0.900000"' in prompt
+
+
+@dataclass
+class RecordingUnderstandingChat:
+    messages: list[dict[str, str]] | None = None
+
+    async def complete(self, messages, *, temperature=0.0, max_tokens=1200):
+        self.messages = messages
+        return ChatResult(
+            '{"route":"retrieve","canonical_query":"A项目的报销期限是多少",'
+            '"question_type":"single_hop","intent":"fact_lookup",'
+            '"entities":["A项目"],"constraints":{},"subqueries":[],'
+            '"clarification_question":null,"confidence":0.94}'
+        )
+
+
+class FailingUnderstandingChat:
+    last_retry_count = 2
+
+    async def complete(self, messages, *, temperature=0.0, max_tokens=1200):
+        raise RuntimeError("query understanding unavailable")
+
+
+@pytest.mark.asyncio
+async def test_query_understanding_uses_bounded_history_to_resolve_a_reference() -> None:
+    chat = RecordingUnderstandingChat()
+    service = AgentService(None, None, None, chat, settings())  # type: ignore[arg-type]
+
+    understanding = await service._understand_query(
+        "它的报销期限是多少？",
+        [
+            {
+                "question": "A项目怎么报销？",
+                "answer": "需要提交申请。",
+                "route": "single_pass_rag",
+                "created_at": "2026-08-19T00:00:00Z",
+            }
+        ],
+        {"name": "项目制度", "description": "内部项目制度"},
+    )
+
+    assert understanding.canonical_query == "A项目的报销期限是多少"
+    assert understanding.question_type == "single-hop"
+    assert understanding.method == "llm"
+    assert understanding.llm_called is True
+    assert understanding.latency_ms >= 0
+    assert understanding.clarification_question is None
+    assert chat.messages is not None
+    prompt = chat.messages[-1]["content"]
+    assert "A项目怎么报销" in prompt
+    assert "它的报销期限是多少" in prompt
+    assert "Do not answer the question" in chat.messages[0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_query_understanding_fallback_traces_attempted_llm_call() -> None:
+    service = AgentService(  # type: ignore[arg-type]
+        None,
+        None,
+        None,
+        FailingUnderstandingChat(),
+        settings(),
+    )
+
+    understanding = await service._understand_query(
+        "比较甲方案和乙方案",
+        [],
+        {"name": "方案库", "description": ""},
+    )
+
+    assert understanding.method == "deterministic_rules_v2"
+    assert understanding.question_type == "multi-hop"
+    assert understanding.llm_called is True
+    assert understanding.retry_count == 2
+    assert "query understanding unavailable" in (understanding.model_error or "")

@@ -52,8 +52,25 @@ def test_dialog_javascript_has_explicit_open_close_and_reset_paths() -> None:
 
 def test_frontend_assets_are_cache_busted() -> None:
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
-    assert 'styles.css?v=0.1.3' in html
-    assert 'app.js?v=0.1.3' in html
+    assert 'styles.css?v=0.2.0' in html
+    assert 'app.js?v=0.2.0' in html
+
+
+def test_conversation_memory_control_is_bounded_and_sent_with_an_isolated_id() -> None:
+    elements = frontend_elements()
+    assert elements["conversation-id"][1]["maxlength"] == "120"
+    assert elements["memory-turns"][1]["min"] == "0"
+    assert elements["memory-turns"][1]["max"] == "10"
+    assert elements["memory-turns"][1]["value"] == "5"
+    assert elements["retrieval-concurrency"][1]["min"] == "1"
+    assert elements["retrieval-concurrency"][1]["max"] == "4"
+    assert elements["retrieval-concurrency"][1]["value"] == "2"
+    assert elements["new-conversation-button"][1]["type"] == "button"
+    javascript = (STATIC_DIR / "app.js").read_text(encoding="utf-8")
+    assert "conversation_id: configuredConversationId()" in javascript
+    assert "memory_turns: memoryTurns" in javascript
+    assert "retrieval_concurrency: retrievalConcurrency" in javascript
+    assert "state.conversationIds[state.activeKnowledgeBase.id] = createConversationId()" in javascript
 
 
 def test_index_strategy_controls_are_sent_to_the_api() -> None:

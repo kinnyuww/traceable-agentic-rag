@@ -515,16 +515,53 @@ class Repository:
             payload=event_payload,
         )
 
-    def create_run(self, kb_id: str, index_id: str | None, question: str) -> str:
+    def create_run(
+        self,
+        kb_id: str,
+        index_id: str | None,
+        question: str,
+        conversation_id: str | None = None,
+    ) -> str:
         run_id = new_id("run")
         self.db.execute(
             """
-            INSERT INTO runs(id,knowledge_base_id,index_version_id,question,status,created_at)
-            VALUES(?,?,?,?,?,?)
+            INSERT INTO runs(
+              id,knowledge_base_id,index_version_id,conversation_id,question,status,created_at
+            )
+            VALUES(?,?,?,?,?,?,?)
             """,
-            (run_id, kb_id, index_id, question, "running", utc_now()),
+            (run_id, kb_id, index_id, conversation_id, question, "running", utc_now()),
         )
         return run_id
+
+    def recent_conversation(
+        self,
+        kb_id: str,
+        conversation_id: str | None,
+        limit: int,
+    ) -> list[dict[str, str]]:
+        if not conversation_id or limit <= 0:
+            return []
+        rows = self.db.fetch_all(
+            """
+            SELECT question,answer,route,created_at
+            FROM runs
+            WHERE knowledge_base_id=? AND conversation_id=?
+              AND status='succeeded' AND answer IS NOT NULL
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (kb_id, conversation_id, limit),
+        )
+        return [
+            {
+                "question": row["question"],
+                "answer": row["answer"],
+                "route": row["route"] or "",
+                "created_at": row["created_at"],
+            }
+            for row in reversed(rows)
+        ]
 
     def append_trace(self, run_id: str, stage: str, payload: dict[str, Any]) -> None:
         connection = self.db.transaction()

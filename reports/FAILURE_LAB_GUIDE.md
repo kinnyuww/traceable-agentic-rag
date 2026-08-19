@@ -23,7 +23,9 @@
 3. 在“问答”页点击任意示例问题，再点“发送”。
 4. 先看答案和引用文件；不要只看答案是否像是正确的。
 5. 打开“运行轨迹”，展开 `retrieval_round`。
-6. 依次检查 `dense_candidates`、`sparse_candidates`、`fused_candidates` 和 `reranked_candidates` 的文件名、章节和分数。
+6. 在各 `retrieval_round` 检查 `dense_candidates`、`sparse_candidates`、
+   `fused_candidates`；在 `retrieval_merge_rerank.global_rerank.candidates` 检查最终
+   Top 6 的文件名、章节和分数。
 7. 再展开 `evidence_gate`、`context_selection` 与 `answer_generation`，看证据是在哪一步被接受、丢失或污染的。
 
 最推荐先试三个问题：

@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     rerank_k: int = 6
     max_agent_rounds: int = 2
     max_subqueries: int = 4
+    retrieval_query_concurrency: int = Field(default=2, ge=1, le=4)
+    conversation_memory_turns: int = Field(default=5, ge=0, le=10)
     evidence_threshold: float = 0.52
     context_min_rerank_score: float = 0.02
     context_relative_score: float = 0.10

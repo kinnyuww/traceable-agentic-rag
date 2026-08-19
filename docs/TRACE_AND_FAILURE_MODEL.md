@@ -2,7 +2,7 @@
 
 ## Principle
 
-A wrong answer is the end of a causal chain, not a useful diagnosis. v0.1
+A wrong answer is the end of a causal chain, not a useful diagnosis. v0.2
 records each boundary where information can be lost or distorted so an operator
 can answer: “Was the evidence absent from storage, not parsed, badly chunked,
 not recalled, fused too low, reranked away, rejected by the evidence gate, lost
@@ -10,21 +10,21 @@ in the prompt, or ignored by generation?”
 
 ## Failure-surface matrix
 
-| Layer | Typical instability | Required evidence in v0.1 | Evaluation or alert | Runtime behavior |
+| Layer | Typical instability | Required evidence in v0.2 | Evaluation or alert | Runtime behavior |
 |---|---|---|---|---|
 | Upload | empty, duplicate, too large, unsupported extension | HTTP status; hash; size; document ID | upload contract tests | reject without overwrite |
 | Object store | partial write or path traversal | safe basename; SHA-256 object path | duplicate and filename tests | atomic temporary-file replace |
 | PDF/DOCX/TXT parse | corrupt file, encoding error, missing extractable text | job `parsing` event; parser; section/character counts; error | parser fixtures; manual source inspection | document becomes `failed` |
-| OCR/table/layout | information exists visually but parser never sees it | zero/low extracted characters and source metadata | operator review; future layout benchmark | explicitly unsupported in v0.1 |
+| OCR/table/layout | information exists visually but parser never sees it | zero/low extracted characters and source metadata | operator review; future layout benchmark | explicitly unsupported in v0.2 |
 | Chunk boundary | answer split across chunks, semantic breakpoint drift, oversized/noisy chunks | requested/resolved strategy, semantic breakpoint counts, ordinal, section/page and offsets | gold-evidence hit by chunk; boundary fixtures; structure/semantic ablation | structure-first + weak-structure semantic fallback + bounded overlap |
-| Context enrichment | summary omits or invents a fact, or doubles cost | index `contextualize` config | contextual-vs-baseline offline experiment | LLM contextual summaries explicitly unavailable in v0.1 |
+| Context enrichment | summary omits or invents a fact, or doubles cost | index `contextualize` config | contextual-vs-baseline offline experiment | LLM contextual summaries explicitly unavailable in v0.2 |
 | Embedding | endpoint unavailable, dimension mismatch, drift, local request accidentally routed through a system proxy | provider/model, dimension, retry count, job error | real-model smoke; dimension and local proxy-bypass assertions | bypass proxy for local hosts; transient retry; otherwise fail index/query |
 | Dense retrieval | semantic miss, multilingual weakness, exact-search cost, ANN recall loss | backend/exact flag, cache, HNSW parameters, ordered chunk IDs, cosine scores and latency | Hit@K, MRR@10, Recall@10, nDCG@10; HNSW-vs-exact recall | keep dense candidates and backend for trace |
 | Sparse retrieval | synonym miss, tokenizer mismatch, identifier sensitivity | ordered BM25 candidates and scores | same metrics; dense/BM25 ablation | Unicode + Chinese char/bigram terms |
 | Fusion | relevant item demoted by rank combination | RRF candidates/scores, k=60 | stage-by-stage metrics | rank-based RRF avoids score calibration |
 | Reranker | model cold start/503, truncation, domain mismatch, relevant item demotion | provider, retry count, latency, scores, fallback/error | pre/post-rerank delta | bounded retry; lexical fallback |
-| Query understanding | underspecified referent or missed facets | evidence-gate reason and missing facts | clarify/answerability cases | clarify or one rewrite/decomposition round |
-| Multi-hop retrieval | only one supporting source found | source diversity, subqueries, second-round candidates | all-evidence Recall@10 | max four subqueries, max two rounds |
+| Query understanding | underspecified referent, unstable rewrite/classification, external-model latency or failure | original/canonical query, isolated history count, single/multi-hop, intent/entities/constraints, latency, tokens, retries and fallback error | reference-resolution, clarify/answerability and latency cases | DeepSeek primary; deterministic fallback; never answers the question |
+| Multi-view/multi-hop retrieval | only one facet or supporting source found; incomparable per-view scores | each independent view, concurrency, merged/deduplicated counts and canonical-query global rerank | all-evidence Recall@10 and rerank Hit@6 | max four views, bounded concurrency, one global rerank; max two rounds |
 | Evidence set + gate | false accept/reject; gate/generation set drift | question type, limit, floor, selected/discarded IDs, audited IDs, joint coverage and decision | answerability plus set-identity assertions | single-hop ≤4, multi-hop ≤6; one set shared by gate/generation |
 | Context assembly | duplicate/noisy evidence; useful item in the middle | selected chunk IDs and citation mapping | citation/evidence-set checks | no post-gate reselection |
 | Prompt injection | document tells model to ignore system instructions | untrusted-source delimiters and security prompt | adversarial document fixture | document text never grants instructions |
@@ -40,11 +40,15 @@ in the prompt, or ignored by generation?”
 Ordered stages are intentionally human-readable JSON:
 
 - `query_received`: question, knowledge base, immutable index and budgets.
-- `query_understanding`: deterministic method, no-LLM flag, ambiguity,
-  single/multi-hop markers, unchanged round-1 query and bounded retry policy.
-- `retrieval_round`: query; every dense, sparse, RRF and final candidate;
+- `query_understanding`: DeepSeek or deterministic fallback method; original and
+  canonical query; history count; single/multi-hop; intent, entities,
+  constraints, subqueries; latency, tokens, retry count and model error.
+- `retrieval_round`: one recall view; every dense, sparse and RRF candidate;
   chunk ID、document ID、文件名、页/章节位置和分数；counts；model
-  providers；retry counts；stage and total latency；reranker degradation。
+  providers；retry counts；stage and total latency。Recall-only 视图不单独
+  rerank。
+- `retrieval_merge_rerank`: 本轮所有 query views、并发上限、合并前后数量、
+  重复数，以及针对 canonical query 的唯一全局 Rerank Top 6、耗时和降级。
 - `context_selection`: before each gate, records single-hop/multi-hop, selection
   policy, limit, the single-hop absolute/relative score floor (null for
   multi-hop), Top-1 fallback and selected/discarded chunks.
@@ -63,7 +67,7 @@ parsing/chunking/embedding/persisting/evaluating, completed or failed states.
 
 ## What is not yet automatically diagnosed
 
-v0.1 supplies the evidence needed for diagnosis but does not claim to infer a
+v0.2 supplies the evidence needed for diagnosis but does not claim to infer a
 single root cause automatically. The next Harness Engineering iteration can
 compare gold evidence with each candidate list, assign a failure taxonomy,
 propose a controlled intervention, run it against development data, and require

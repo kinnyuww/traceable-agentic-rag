@@ -1,0 +1,62 @@
+{
+  "generated_at": "2026-08-19",
+  "scope": "same-runtime fixed-slice diagnostic; not an official leaderboard",
+  "models": {
+    "embedding": "ai/qwen3-embedding:0.6B-F16",
+    "reranker": "ai/qwen3-reranker:0.6B",
+    "generation": "disabled for fixed-slice comparison"
+  },
+  "query_understanding_comparison": {
+    "baseline_commit": "f2134c6",
+    "current_strategy": "deterministic fallback plus multi-view recall and one global rerank",
+    "multihoprag": {
+      "rerank_all_evidence_at_10": {"before": 0.944444, "after": 1.0},
+      "all_evidence_cited_rate_answerable": {"before": 0.944444, "after": 1.0},
+      "answerability_accuracy": {"before": 0.958333, "after": 1.0},
+      "mean_latency_ms": {"before": 3487.332, "after": 4650.408},
+      "p95_latency_ms": {"before": 8031.589, "after": 9850.546}
+    }
+  },
+  "chunk_comparison_qasper": {
+    "auto": {
+      "chunks": 164,
+      "semantic_windows": 0,
+      "semantic_breakpoints": 0,
+      "index_latency_ms": 19711.496,
+      "rerank_all_evidence_at_10": 0.916667,
+      "evidence_hit_rate_answerable": 0.833333,
+      "answerability_accuracy": 0.714286
+    },
+    "semantic": {
+      "chunks": 167,
+      "semantic_windows": 756,
+      "semantic_breakpoints": 87,
+      "index_latency_ms": 66837.309,
+      "rerank_all_evidence_at_10": 0.916667,
+      "evidence_hit_rate_answerable": 0.916667,
+      "answerability_accuracy": 0.642857
+    }
+  },
+  "live_deepseek_check": {
+    "conversation_reference_resolved": true,
+    "canonical_query": "Auto Dense 默认在多少个 chunk 后切换到 HNSW？",
+    "answer_correct": true,
+    "gate_generation_citation_ids_match": true,
+    "query_understanding_latency_ms": 3291.472,
+    "query_understanding_prompt_tokens": 349,
+    "query_understanding_completion_tokens": 314,
+    "total_latency_ms": 21064.354,
+    "reranker_degraded": true,
+    "reranker_error": "HTTP 500 after long-input model request",
+    "reranker_fallback_latency_ms": 9145.529
+  },
+  "ragas_current_two_example_diagnostic": {
+    "evidence_hit_rate": 1.0,
+    "all_expected_evidence_cited_rate": 1.0,
+    "context_precision_with_reference": 0.75,
+    "context_recall": 0.75,
+    "faithfulness_available_rows_mean": 0.666667,
+    "ragas_errors": 1,
+    "mean_latency_ms": 11827.364
+  }
+}

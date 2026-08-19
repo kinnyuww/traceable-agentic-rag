@@ -21,9 +21,10 @@
      → SQLite chunks + FTS5 BM25
      → Exact matrix 或 USearch HNSW
 
-问题 → deterministic query understanding
-     → Dense Top 20 + BM25 Top 20
-     → RRF Top 12 → rerank Top 6
+问题 + 可选会话 → DeepSeek query understanding（失败时规则回退）
+     → original / canonical / 多跳子问题独立召回
+     → 各自 Dense Top 20 + BM25 Top 20 + RRF Top 12
+     → 合并去重 → canonical query 全局 rerank Top 6
      → Evidence Set → Gate → 同一集合生成/引用
 ```
 
@@ -47,8 +48,8 @@
 - Auto 默认少于 100,000 chunks 使用 Exact，达到阈值才使用 HNSW。阈值可配置。
 - Chunk Auto 对有意义的 Markdown/DOCX 标题保留结构路径，对长 TXT/PDF 通用段落
   才运行 embedding 语义断点；中文句界已修正。
-- 新增 `query_understanding`：明确记录没有调用 LLM、命中了哪些多跳标记、首轮
-  query 是否改写，以及何时才允许二轮 planner 介入。
+- `query_understanding` 现由 DeepSeek 生成 canonical query、single/multi-hop、实体、
+  约束和初始子问题；失败时保留确定性规则路径。模型耗时、token、retry 和错误可追踪。
 
 ## 2. “SQLite 搜索算法”到底是什么
 
@@ -173,22 +174,21 @@ Document/Section/Page 元数据；生成式 contextual summary 保留为后续�
 
 ## 5. Query understanding 在当前 Agent 中怎样体现
 
-现在的“理解”不是一次万能 LLM 分类，而是三个层次：
+当前先保留 greeting/help 的确定性无 RAG 路由。普通知识问题会把原问题、知识库
+简介和同一 `conversation_id` 下最近 0～10 轮发送给 DeepSeek；模型只做理解和规划，
+不回答问题。它返回 standalone canonical query、single/multi-hop、实体、约束、
+clarify 状态和多跳 2～3 个原子子问题。
 
-1. **确定性路由**：精确 greeting/help 才能不进 RAG；知识库事实题不能凭模型记忆
-   直接回答。
-2. **问题形态**：歧义规则以及 `分别/比较/为什么/以及/and/compare/...` 等标记
-   判定 single-hop 或 multi-hop。这决定 Evidence Set 最多 4 还是保留 Top 6。
-3. **基于结果的 Agent 决策**：首轮 query 原样检索；只有 Gate 判断证据不足才允许
-   planner 改写/拆分，最多第二轮、最多四个子查询。
+Single-hop 在原问题与 canonical 不同时分别召回；Multi-hop 使用 canonical 加原子
+子问题，总视角最多四个。每个视角独立执行 Dense/BM25/RRF，候选按 chunk ID 合并，
+最后只针对 canonical query 做一次全局 rerank Top 6。EvidenceSet 使用这一次分类，
+不会在 rerank 后再次用 `_looks_multihop` 覆盖它。DeepSeek 禁用、失败或返回非法类型
+时才回退到确定性规则。
 
-`query_understanding` trace 记录 method、`llm_called=false`、命中标记、ambiguity、
-首轮原 query 和 retry policy。因此用户可以看到“理解规则影响了什么”，而不是只看
-一个 opaque label。
-
-这里暂不增加一次 DeepSeek 调用是合理的：大量简单查询不需要为分类增加时延、
-费用和新的不稳定点。未来若规则在真实失败集中成为主要瓶颈，再把 LLM classifier
-作为候选实验，而不是凭感觉默认开启。
+`query_understanding` trace 记录是否实际尝试 LLM、method、canonical query、分类、
+会话轮数、子查询、latency、token、retry 和 model error；`retrieval_merge_rerank`
+记录并发、合并去重和全局 Top 6。完整复核与同环境 A/B 见
+[`CHUNK_AND_QUERY_UNDERSTANDING_REVIEW.md`](CHUNK_AND_QUERY_UNDERSTANDING_REVIEW.md)。
 
 ## 6. 用户怎样选择
 
@@ -228,7 +228,7 @@ POST /v1/knowledge-bases/{kb_id}/index-builds
 | `src/ragagent/static/*` | Web UI 策略选择 |
 | `tests/*` | 结构/语义路径、HNSW/Exact 对照、trace/API/UI 契约 |
 
-当前验证：Ruff 全通过，完整 pytest `39 passed`。新增 A/B 测试还暴露并修复了一个
+当前验证：Ruff 全通过，完整 pytest `46 passed`。新增 A/B 测试还暴露并修复了一个
 旧 bug：同一知识库第二次建索引时，旧 chunk ID 未包含 index version，会违反全局
 唯一键。现在 chunk ID 绑定不可变 index version，才能真正建立两套策略做回放。
 

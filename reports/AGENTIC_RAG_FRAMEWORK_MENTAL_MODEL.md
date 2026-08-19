@@ -382,7 +382,9 @@ Gate 返回 `answer` 后不会再次运行另一套 Context Selection。DeepSeek
 | Trace stage | 回答的问题 |
 |---|---|
 | `query_received` | 问题、知识库、索引版本、预算是什么？ |
-| `retrieval_round` | dense、BM25、RRF、rerank 各看到了哪些 chunk？分数和耗时怎样？ |
+| `query_understanding` | canonical query、单/多跳、会话指代、子问题是什么？模型耗时/重试怎样？ |
+| `retrieval_round` | 每个 query view 的 dense、BM25、RRF 各看到了哪些 chunk？ |
+| `retrieval_merge_rerank` | 多视角怎样合并去重？canonical query 的全局 Top 6 是什么？ |
 | `evidence_gate` | 为什么回答、重试或澄清？规则还是 LLM 做的？ |
 | `query_plan` | 第二轮用了哪些子查询，为什么？ |
 | `context_selection` | 哪些 chunk 被送入模型，哪些被丢弃，门槛是多少？ |

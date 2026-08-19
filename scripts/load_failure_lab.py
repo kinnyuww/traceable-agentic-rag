@@ -330,10 +330,27 @@ async def wait_job(
 
 
 def candidate_documents(run: dict[str, Any], stage: str) -> set[str]:
-    first = next(event for event in run["trace"] if event["stage"] == "retrieval_round")
+    if stage == "reranked_candidates":
+        merged = next(
+            (
+                event
+                for event in run["trace"]
+                if event["stage"] == "retrieval_merge_rerank"
+                and event["payload"].get("round") == 1
+            ),
+            None,
+        )
+        if merged is not None:
+            return {
+                item["document_id"]
+                for item in merged["payload"].get("global_rerank", {}).get("candidates", [])
+                if item.get("document_id")
+            }
     return {
         item["document_id"]
-        for item in first["payload"].get(stage, [])
+        for event in run["trace"]
+        if event["stage"] == "retrieval_round" and event["payload"].get("round") == 1
+        for item in event["payload"].get(stage, [])
         if item.get("document_id")
     }
 

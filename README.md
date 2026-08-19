@@ -1,29 +1,36 @@
 # Traceable Agentic RAG
 
 [![CI](https://github.com/kinnyuww/traceable-agentic-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/kinnyuww/traceable-agentic-rag/actions/workflows/ci.yml)
+[![Release: v0.2.0](https://img.shields.io/badge/release-v0.2.0-175f48.svg)](CHANGELOG.md)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-086f68.svg)](LICENSE)
 
-> **v0.1 Baseline** — local-first, traceable, evaluable, and usable as both a
-> complete Web RAG application and an embeddable REST service.
+> **v0.2 Query-Aware Retrieval** — local-first, traceable, evaluable, and usable
+> as both a complete Web RAG application and an embeddable REST service.
 
 一个本地优先、可独立使用、也可通过 REST 嵌入其他 Agent 的可追踪
-Agentic RAG。v0.1 的重点不是声称“自动进化”，而是先把数据、索引、检索、
-路由、证据、回答与评测变成可复现的工程基线。
+Agentic RAG。v0.2 已经打通从文档上传、解析、切块、索引、问题理解、混合检索、
+有界二轮规划、证据审核到引用回答的完整链路。它为 Harness Engineering 与 HITL
+自调优准备了不可变 trace 和评测接口，但还没有让线上 Agent 自动修改自己的配置。
 
 已在 Apple M1 Pro 32 GB 上完成真实模型和 Docker 验证：文档上传与解析、
 自适应结构/语义切块、不可变索引版本、Exact/HNSW dense + BM25 + RRF 混合检索、Qwen rerank、
 有界二轮 Agentic 检索、引用回答、逐阶段 trace、离线评测和 Web UI 均可运行。
 
-## v0.1 的定位
+## v0.2 的定位
 
 知识库事实问题永远先检索，不允许生成模型因为“似乎知道答案”而跳过 RAG。
-首轮证据充分时走低延迟单轮路径；证据弱、缺少问题要素或需要多跳时，才改写/
-分解问题并再检索一次。系统最多检索 2 轮，第二轮最多 4 个子查询，最后回答、
+知识问题会先经过 DeepSeek Query Understanding，生成无指代的 canonical query，并
+判断单跳/多跳；可选会话记忆按 `conversation_id` 隔离，每次使用 0～10 轮，默认 5
+轮且设置为 0 即关闭。单跳用原问题和 canonical query 的去重视角召回，多跳用
+canonical query 加 2～3 个原子子问题召回；多个 query 默认以并发 2、最大可配置到
+4 的方式受控并行，候选合并去重后统一用 canonical query
+rerank。首轮证据充分时直接回答；证据弱时再根据缺失事实检索一次。系统最多检索
+2 轮，第二轮最多 4 个子查询，最后回答、
 请求澄清或明确拒答，没有无界 Agent 循环，也不会在线修改自己的配置。
 
 在线证据主路径为：
 
-`Rerank Top 6 → 单跳 floor 后最多 4 / 多跳保留全部 6 → Evidence Gate → 同一集合直接生成与引用`
+`Query Understanding → 多视角独立召回 → 合并去重 → canonical query 全局 Rerank Top 6 → 单跳 floor 后最多 4 / 多跳保留全部 6 → Evidence Gate → 同一集合直接生成与引用`
 
 单跳使用动态门槛 `max(0.02, top_rerank × 10%)` 降噪；多跳不使用该门槛删除
 尾部证据，保留 Rerank Top 6。Gate 放行后不会再用另一套 Context Selection
@@ -42,6 +49,22 @@ Agentic RAG。v0.1 的重点不是声称“自动进化”，而是先把数据�
   状态和预算，适合后续做失败归因与受控实验。
 - **索引策略可选择但不失去基线**：每个不可变索引可以选 `auto / exact / hnsw`
   和 `auto / structure / semantic`；请求值、解析值、参数和耗时都进入配置或 trace。
+
+## 现在做到了哪一步
+
+| 原始计划阶段 | 当前状态 | v0.2 的实际结果 |
+|---|---|---|
+| 端到端 RAG 应用与服务 | **完成** | Web UI、REST、Docker API/worker、持久化 volume、三种使用入口均已连通 |
+| 可追踪、可评测 baseline | **完成** | 离线 job trace、在线 run trace、引用、拒答、固定评测集与 Ragas 适配器 |
+| 自适应数据与检索层 | **完成首版** | 结构/语义自适应切块，Exact/HNSW 可选，BM25 + RRF + Qwen rerank |
+| Agentic 在线路径 | **完成首版** | DeepSeek 问题理解、会话指代消解、多视角召回、一次全局 rerank、最多二轮 |
+| Evidence 安全闭环 | **完成** | Gate 审核、生成上下文和 citation 使用同一 Evidence Set，可逐 ID 核对 |
+| Harness Engineering / HITL | **尚未实现** | 已有 trace、评测和不可变版本基础；反馈审批、失败归因、候选实验与发布门禁进入 v0.3 |
+| 生产级平台化 | **尚未实现** | OCR/复杂表格、多租户/RBAC、公网安全、MCP 与漂移监控仍在后续版本 |
+
+所以 v0.2 是一个可以真实建库、问答、集成和做失败实验的 **Agentic RAG
+应用/服务**，不是演示脚本；但它仍是单工作区开发者版本，不应被描述为已经能无人
+监督地自我进化或直接作为公网多租户 SaaS。
 
 ## 一个系统，三条使用入口
 
@@ -127,9 +150,17 @@ curl -s http://127.0.0.1:8080/v1/query \
   -H 'Content-Type: application/json' \
   -d '{
     "knowledge_base_id": "kb_REPLACE_ME",
-    "question": "这份制度中员工每年有多少天年假？"
+    "question": "这份制度中员工每年有多少天年假？",
+    "conversation_id": "my-session-001",
+    "memory_turns": 5,
+    "retrieval_concurrency": 2
   }'
 ```
+
+`conversation_id` 和 `memory_turns` 都是可选字段；没有 `conversation_id` 时服务保持
+无状态，`memory_turns` 允许 0～10。Web UI 会为每个知识库会话生成隔离 ID，并提供
+记忆轮数与“新会话”控制。`retrieval_concurrency` 也是可选的请求级参数，允许
+1～4；未传时使用服务器默认值，适合 Harness 在不重启服务的情况下比较并发策略。
 
 也可以按 Web UI 中的名称调用可运行示例：
 
@@ -261,7 +292,7 @@ Retrieval 仍作为独立的后续实验，避免让 Gate 把模型生成文本�
 
 ## 当前明确边界
 
-- v0.1 是可追踪、可评测的 baseline，不宣称已经在线自进化。
+- v0.2 是 query-aware、可追踪、可评测的 Agentic RAG，不宣称已经在线自进化。
 - DOCX 表格、OCR、复杂 PDF 布局和多模态尚未进入稳定解析路径。
 - Auto 的 10 万 chunk 阈值是保守起点，不是通用真理；生产环境必须用自己的查询
   集比较 HNSW 对 Exact 的 Recall@K、P95、内存和并发。
@@ -272,6 +303,9 @@ Retrieval 仍作为独立的后续实验，避免让 Gate 把模型生成文本�
 
 ## 验证与报告
 
+- [v0.2 完整实现、评测与路线图报告](reports/TRACEABLE_AGENTIC_RAG_V0.2_REPORT.md)
+- [Chunk、Query Understanding 与新旧性能复核](reports/CHUNK_AND_QUERY_UNDERSTANDING_REVIEW.md)
+- [在线检索执行图（服务启动后）](http://127.0.0.1:8080/app/retrieval-framework.html)
 - [v0.1 工程决策报告：SQL 检索、Chunk 策略与优化顺序](reports/explainer-rag-v01-decision-report.html)
 - [自适应 Chunk 与可选择 Dense Search 升级报告](reports/ADAPTIVE_CHUNKING_AND_DENSE_SEARCH.md)
 - [多颗粒度框架与心智模型报告](reports/AGENTIC_RAG_FRAMEWORK_MENTAL_MODEL.md)
@@ -288,7 +322,7 @@ Retrieval 仍作为独立的后续实验，避免让 Gate 把模型生成文本�
 - [MIRACL-zh 结果](reports/results/miracl-zh-real-model.json)
 - [Semantic + HNSW 真实模型 smoke](reports/results/strategy-smoke-real-model.json)
 
-当前回归结果为 Ruff 全通过、pytest `39 passed`。粗糙知识库
+当前回归结果为 Ruff 全通过、pytest `46 passed`。粗糙知识库
 用于暴露失败而不是制造漂亮分数：答案文本可正确但完整证据链仍可能不干净，这正是
 trace、拒答和后续 Harness Engineering 存在的原因。
 
@@ -300,10 +334,17 @@ UV_CACHE_DIR=/tmp/ragagent-uv-cache uv run --no-sync ruff check .
 UV_CACHE_DIR=/tmp/ragagent-uv-cache uv run --no-sync pytest -q
 ```
 
-## Roadmap：从 Baseline 到 Harness Engineering
+## Roadmap：从 v0.2 到 Harness Engineering
 
-v0.1 有意不做 OCR/复杂表格、多租户/RBAC、MCP、反馈审批、自动失败归因、
-自动参数实验、自调优和 HITL 发布门禁。下一阶段计划围绕下面的闭环展开：
+| 版本 | 主题 | 状态 |
+|---|---|---|
+| v0.1.0 | Traceable baseline：端到端应用、Hybrid RAG、Evidence Gate、trace/eval | 已发布 |
+| **v0.2.0** | Query-aware adaptive retrieval：自适应 chunk/ANN、会话理解、多视角召回、Evidence Set 一致性 | **当前版本** |
+| v0.3.0 | Harness Engineering：反馈金标、失败归因、候选实验、回归门禁、HITL 发布/回滚 | 下一阶段 |
+| v0.4+ | MCP、OCR/表格、生产安全、多租户、漂移监控与受限自动提升 | 规划中 |
+
+v0.2 有意不做反馈审批、自动失败归因、自动参数实验、自调优和 HITL 发布门禁。
+下一阶段围绕下面的闭环展开：
 
 ```text
 用户/专家反馈

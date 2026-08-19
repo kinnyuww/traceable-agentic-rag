@@ -267,6 +267,43 @@ def _unique_document_order(chunk_ids: list[str], chunk_to_key: dict[str, str]) -
     return result
 
 
+def _round_candidate_ids(
+    trace: list[Any],
+    *,
+    round_number: int,
+    candidate_group: str,
+) -> list[str]:
+    """Flatten one recall stage across every query view in a retrieval round."""
+    chunk_ids: list[str] = []
+    seen: set[str] = set()
+    for event in trace:
+        if event.stage != "retrieval_round" or event.payload.get("round") != round_number:
+            continue
+        for item in event.payload.get(candidate_group, []):
+            chunk_id = str(item.get("chunk_id", ""))
+            if chunk_id and chunk_id not in seen:
+                chunk_ids.append(chunk_id)
+                seen.add(chunk_id)
+    return chunk_ids
+
+
+def _round_reranked_ids(trace: list[Any], *, round_number: int) -> list[str]:
+    """Read the canonical-query global rerank, with old-trace compatibility."""
+    for event in trace:
+        if event.stage != "retrieval_merge_rerank" or event.payload.get("round") != round_number:
+            continue
+        return [
+            str(item["chunk_id"])
+            for item in event.payload.get("global_rerank", {}).get("candidates", [])
+            if item.get("chunk_id")
+        ]
+    return _round_candidate_ids(
+        trace,
+        round_number=round_number,
+        candidate_group="reranked_candidates",
+    )
+
+
 def _rank_metrics(order: list[str], expected: list[str], k: int = 10) -> dict[str, float]:
     if not expected:
         return {}
@@ -360,20 +397,34 @@ async def run_suite(suite: BenchmarkSuite, settings: Settings) -> dict[str, Any]
             index_version_id=index_id,
         )
         run = container.repository.get_run(response.run_id)
-        first_retrieval = next(event for event in run.trace if event.stage == "retrieval_round")
-        diagnostics = first_retrieval.payload
         stage_orders = {
             "dense": _unique_document_order(
-                [item["chunk_id"] for item in diagnostics["dense_candidates"]], chunk_to_key
+                _round_candidate_ids(
+                    run.trace,
+                    round_number=1,
+                    candidate_group="dense_candidates",
+                ),
+                chunk_to_key,
             ),
             "sparse": _unique_document_order(
-                [item["chunk_id"] for item in diagnostics["sparse_candidates"]], chunk_to_key
+                _round_candidate_ids(
+                    run.trace,
+                    round_number=1,
+                    candidate_group="sparse_candidates",
+                ),
+                chunk_to_key,
             ),
             "rrf": _unique_document_order(
-                [item["chunk_id"] for item in diagnostics["fused_candidates"]], chunk_to_key
+                _round_candidate_ids(
+                    run.trace,
+                    round_number=1,
+                    candidate_group="fused_candidates",
+                ),
+                chunk_to_key,
             ),
             "rerank": _unique_document_order(
-                [item["chunk_id"] for item in diagnostics["reranked_candidates"]], chunk_to_key
+                _round_reranked_ids(run.trace, round_number=1),
+                chunk_to_key,
             ),
         }
         if example.answerable:
@@ -499,6 +550,7 @@ async def main_async(args: argparse.Namespace) -> None:
                 rerank_model=args.rerank_model,
                 llm_enabled=False,
                 evidence_threshold=args.evidence_threshold,
+                chunk_default_strategy=args.chunk_strategy,
             )
             results.append(await run_suite(suite, settings))
     report = {
@@ -516,6 +568,7 @@ async def main_async(args: argparse.Namespace) -> None:
             "rerank_provider": "Docker Model Runner native /rerank",
             "rerank_model": args.rerank_model,
             "generation_model": "disabled (retrieval-stage diagnostic; no LLM quality claim)",
+            "chunk_strategy": args.chunk_strategy,
             "max_agent_rounds": 2,
         },
         "inputs": {
@@ -543,6 +596,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rerank-endpoint", default="http://localhost:12434/rerank")
     parser.add_argument("--rerank-model", default="ai/qwen3-reranker:0.6B")
     parser.add_argument("--evidence-threshold", type=float, default=0.52)
+    parser.add_argument(
+        "--chunk-strategy",
+        choices=("auto", "structure", "semantic"),
+        default="auto",
+    )
     return parser.parse_args()
 
 

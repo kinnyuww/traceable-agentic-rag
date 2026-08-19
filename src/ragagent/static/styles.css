@@ -95,9 +95,22 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .citation { padding: 11px 13px; color: #41514b; background: #fafbf9; border: 1px solid var(--line); border-radius: 10px; font-size: 12px; }
 .citation strong { color: var(--green); }
 .composer { padding: 17px 20px; background: #fafbf9; border-top: 1px solid var(--line); }
+.runtime-settings { margin: 18px 20px 0; padding: 14px; background: #f1f7f4; border: 1px solid #cfe0d7; border-radius: 12px; }
+.runtime-settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 11px; }
+.runtime-settings-heading strong, .runtime-settings-heading span { display: block; }
+.runtime-settings-heading strong { color: var(--green); font-size: 13px; }
+.runtime-settings-heading span { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.runtime-settings-grid { display: grid; grid-template-columns: minmax(250px, 1.8fr) minmax(130px, .6fr) minmax(170px, .8fr); gap: 10px; }
+.runtime-field { display: grid; grid-template-rows: auto auto 1fr; gap: 5px; min-width: 0; color: #40524a; font-size: 11px; font-weight: 750; }
+.runtime-field input { width: 100%; min-width: 0; padding: 8px 9px; color: var(--ink); background: white; border: 1px solid #c6d4cd; border-radius: 8px; }
+.runtime-field-wide input { font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; }
+.runtime-field small { color: var(--muted); font-size: 9.5px; font-weight: 450; line-height: 1.4; }
 .composer textarea { width: 100%; min-height: 54px; max-height: 180px; padding: 13px 14px; color: var(--ink); background: white; border: 1px solid #cfd8d3; border-radius: 12px; outline: none; resize: vertical; }
 .composer textarea:focus { border-color: #6fa98f; box-shadow: 0 0 0 3px rgba(44,132,92,.12); }
 .composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 10px; color: var(--muted); font-size: 11px; }
+.composer-submit { display: flex; align-items: center; gap: 8px; }
+.compact { padding: 7px 10px; font-size: 11px; }
+.composer-submit { margin-left: auto; }
 
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 27px 28px 18px; }
 .section-heading h2 { margin: 0; font: 650 25px/1.2 Georgia, serif; }
@@ -167,6 +180,10 @@ dialog input:user-invalid, dialog textarea:user-invalid { border-color: var(--re
   .index-pill { max-width: 190px; }
   .panel { min-height: 560px; border-radius: 14px; }
   .index-settings { grid-template-columns: 1fr; }
+  .runtime-settings-heading { align-items: flex-start; flex-direction: column; }
+  .runtime-settings-grid { grid-template-columns: 1fr; }
+  .composer-actions { align-items: stretch; flex-direction: column; }
+  .composer-submit { justify-content: space-between; margin-left: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
