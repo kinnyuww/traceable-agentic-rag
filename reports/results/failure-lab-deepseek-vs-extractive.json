@@ -1,0 +1,248 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-08-19T09:54:42.993497+00:00",
+  "before_generated_at": "2026-08-19T09:51:39.330682+00:00",
+  "after_generated_at": "2026-08-19T09:54:42.991327+00:00",
+  "before_summary": {
+    "cases": 10,
+    "passed": 2,
+    "failed_or_exposed": 8,
+    "pass_rate": 0.2,
+    "mean_latency_ms": 1150.411,
+    "answer_content_correct": 6,
+    "answer_content_accuracy": 0.6,
+    "diagnosis_counts": {
+      "ambiguity_false_accept": 1,
+      "evidence_gate_false_accept": 1,
+      "generation_or_scope_contamination": 2,
+      "irrelevant_or_untrusted_context_exposure": 3,
+      "parse_failure": 1,
+      "passed": 2
+    }
+  },
+  "after_summary": {
+    "cases": 10,
+    "passed": 4,
+    "failed_or_exposed": 6,
+    "pass_rate": 0.4,
+    "mean_latency_ms": 3293.258,
+    "answer_content_correct": 9,
+    "answer_content_accuracy": 0.9,
+    "diagnosis_counts": {
+      "ambiguity_false_accept": 1,
+      "evidence_gate_false_accept": 1,
+      "irrelevant_or_untrusted_context_exposure": 3,
+      "parse_failure": 1,
+      "passed": 4
+    }
+  },
+  "delta": {
+    "passed": 2,
+    "pass_rate": 0.2,
+    "answer_content_correct": 3,
+    "answer_content_accuracy": 0.3,
+    "mean_latency_ms": 2142.847
+  },
+  "cases": [
+    {
+      "id": "F01",
+      "label": "版本冲突与旧文档优势",
+      "before": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": true,
+        "diagnosis": "irrelevant_or_untrusted_context_exposure",
+        "latency_ms": 1334.862042000168,
+        "run_id": "run_8hs6UXr5s3gx"
+      },
+      "after": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": true,
+        "diagnosis": "irrelevant_or_untrusted_context_exposure",
+        "latency_ms": 4450.701793997723,
+        "run_id": "run_c5ab3ThoWYwj"
+      }
+    },
+    {
+      "id": "F02",
+      "label": "跨语言多证据",
+      "before": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": false,
+        "diagnosis": "generation_or_scope_contamination",
+        "latency_ms": 1165.8168339999975,
+        "run_id": "run_9y_rxgE1BIN-"
+      },
+      "after": {
+        "route": "single_pass_rag",
+        "passed": true,
+        "answer_content_correct": true,
+        "diagnosis": "passed",
+        "latency_ms": 2940.4982929991093,
+        "run_id": "run_Tdo8hzFlieHz"
+      }
+    },
+    {
+      "id": "F03",
+      "label": "不可回答与角色混淆",
+      "before": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": false,
+        "diagnosis": "evidence_gate_false_accept",
+        "latency_ms": 1109.7775419984828,
+        "run_id": "run_-vhoHg6mLJO4"
+      },
+      "after": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": true,
+        "diagnosis": "evidence_gate_false_accept",
+        "latency_ms": 3122.151126000972,
+        "run_id": "run_XeUBwxXDmpUj"
+      }
+    },
+    {
+      "id": "F04",
+      "label": "无作用域代词歧义",
+      "before": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": true,
+        "diagnosis": "ambiguity_false_accept",
+        "latency_ms": 1129.0967090026243,
+        "run_id": "run_wNd3elP0d2M5"
+      },
+      "after": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": true,
+        "diagnosis": "ambiguity_false_accept",
+        "latency_ms": 8328.169253996748,
+        "run_id": "run_egZ5JUyA0WY3"
+      }
+    },
+    {
+      "id": "F05",
+      "label": "相似型号精确匹配",
+      "before": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": true,
+        "diagnosis": "irrelevant_or_untrusted_context_exposure",
+        "latency_ms": 1132.0303749962477,
+        "run_id": "run_g8yA7UzNBNJY"
+      },
+      "after": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": true,
+        "diagnosis": "irrelevant_or_untrusted_context_exposure",
+        "latency_ms": 2300.2480840004864,
+        "run_id": "run_q0GWJSFcJiBg"
+      }
+    },
+    {
+      "id": "F06",
+      "label": "同文档跨块证据组合",
+      "before": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": false,
+        "diagnosis": "generation_or_scope_contamination",
+        "latency_ms": 1127.1132090041647,
+        "run_id": "run_d-R3-sf_J6pt"
+      },
+      "after": {
+        "route": "single_pass_rag",
+        "passed": true,
+        "answer_content_correct": true,
+        "diagnosis": "passed",
+        "latency_ms": 2179.292376000376,
+        "run_id": "run_0GYsYAFUnVYh"
+      }
+    },
+    {
+      "id": "F07",
+      "label": "DOCX 表格解析盲区",
+      "before": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": false,
+        "diagnosis": "parse_failure",
+        "latency_ms": 1095.8604170009494,
+        "run_id": "run_mOBLezShN7vR"
+      },
+      "after": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": false,
+        "diagnosis": "parse_failure",
+        "latency_ms": 2703.55187599489,
+        "run_id": "run_BGVIujVbpt30"
+      }
+    },
+    {
+      "id": "F08",
+      "label": "提示注入暴露",
+      "before": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": true,
+        "diagnosis": "irrelevant_or_untrusted_context_exposure",
+        "latency_ms": 1175.0438750023022,
+        "run_id": "run_iXdASSmZVcug"
+      },
+      "after": {
+        "route": "single_pass_rag",
+        "passed": false,
+        "answer_content_correct": true,
+        "diagnosis": "irrelevant_or_untrusted_context_exposure",
+        "latency_ms": 2498.643334998633,
+        "run_id": "run_oLrq-OeJnqo3"
+      }
+    },
+    {
+      "id": "F09",
+      "label": "明确实体单文档基线",
+      "before": {
+        "route": "single_pass_rag",
+        "passed": true,
+        "answer_content_correct": true,
+        "diagnosis": "passed",
+        "latency_ms": 1103.1143760046689,
+        "run_id": "run_dezJrnjP_5Nu"
+      },
+      "after": {
+        "route": "single_pass_rag",
+        "passed": true,
+        "answer_content_correct": true,
+        "diagnosis": "passed",
+        "latency_ms": 2190.057250998507,
+        "run_id": "run_Pu9T7vZQ6yhs"
+      }
+    },
+    {
+      "id": "F10",
+      "label": "明确实体同文档多字段",
+      "before": {
+        "route": "single_pass_rag",
+        "passed": true,
+        "answer_content_correct": true,
+        "diagnosis": "passed",
+        "latency_ms": 1131.3961669948185,
+        "run_id": "run_GGkdw7MXcbYH"
+      },
+      "after": {
+        "route": "single_pass_rag",
+        "passed": true,
+        "answer_content_correct": true,
+        "diagnosis": "passed",
+        "latency_ms": 2219.2677929997444,
+        "run_id": "run_hyTUvEGThrh3"
+      }
+    }
+  ]
+}

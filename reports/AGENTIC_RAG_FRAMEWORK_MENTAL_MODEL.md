@@ -254,15 +254,16 @@ flowchart TD
   Q[收到问题] --> H{只是问候/系统帮助?}
   H -- 是 --> D[确定性直接回复]
   H -- 否 --> R1[第 1 轮 Hybrid Retrieval]
-  R1 --> G1{Evidence Gate}
+  R1 --> E1[构建 Evidence Set\n单跳 floor 后最多 4 / 多跳保留 Top 6]
+  E1 --> G1{Evidence Gate 审核该集合}
   G1 -- 歧义 --> C[要求用户澄清]
-  G1 -- 足够 --> CTX[筛选最多 4 个上下文]
+  G1 -- 足够 --> GEN[同一 Evidence Set 直接生成]
   G1 -- 弱 --> PLAN[改写/分解，最多 4 个子查询]
   PLAN --> R2[第 2 轮 Hybrid Retrieval]
-  R2 --> G2{最终证据检查}
-  G2 -- 足够 --> CTX
+  R2 --> M[合并去重两轮候选并重建 Evidence Set]
+  M --> G2{最终证据检查}
+  G2 -- 足够 --> GEN
   G2 -- 仍弱 --> STOP[明确拒答]
-  CTX --> GEN[DeepSeek grounded generation]
   GEN --> OUT[答案 + 引用 + trace URL]
 ```
 
@@ -322,21 +323,30 @@ Embedding 先用便宜的方法广泛召回，reranker 再把“问题 + 候选�
 
 ## 8. 第七层心智模型：Evidence Gate 如何决定下一步
 
-Evidence Gate 不是简单判断“有没有搜索结果”，而是看结果是否足以支撑问题：
+Evidence Gate 不是简单判断“有没有搜索结果”。Rerank Top 6 后，系统先用
+`_looks_multihop(question)` 确定单跳/多跳，再构建唯一 Evidence Set：
+
+```text
+单跳：score_floor = max(0.02, 第一名 rerank 分数 × 10%)，最多 4 个
+      无人越线时保留 Top 1
+多跳：保留 Rerank Top 6 全部证据，不用 score_floor 删除尾部
+```
+
+Gate 只审核这个已经选定的集合，检查：
 
 - 首名 rerank 分数；
-- 前几个候选对问题词面的覆盖；
+- 所有已选 chunk 合并后的联合 query coverage；
 - 问题是否像多跳问题；
-- 多跳问题是否有至少两个不同文档来源；
+- 多跳问题的整个已选集合是否有至少两个不同文档来源；
 - 当前是第几轮，以及是否用尽预算。
 
 基础阈值是 `0.52`；多跳问题增加 `0.08`。核心组合分为：
 
 ```text
-evidence_score = 0.68 × top_rerank + 0.32 × best_query_coverage
+evidence_score = 0.68 × top_rerank + 0.32 × joint_set_query_coverage
 ```
 
-明显高于阈值时确定性放行，明显不足时重试或停止；在阈值附近的灰区，启用 DeepSeek 后可让模型只做“证据充分性分类”，返回 `answer/retry/clarify`，而不是回答问题。模型分类失败时仍回到确定性规则。
+明显高于阈值时确定性放行，明显不足时重试或停止；在阈值附近的灰区，启用 DeepSeek 后可让模型只做“证据充分性分类”，返回 `answer/retry/clarify`，而不是回答问题。灰区模型看到完整 Evidence Set，多跳时最多 6 个。模型分类失败时仍回到确定性规则。
 
 第二轮最多生成 4 个独立查询。规划优先使用 DeepSeek；API 失败时使用确定性拆分。总轮次固定为 2，避免成本和延迟失控。
 
@@ -344,20 +354,22 @@ evidence_score = 0.68 × top_rerank + 0.32 × best_query_coverage
 
 ## 9. 第八层心智模型：上下文选择、生成和引用
 
-检索 top 6 不会全部无条件塞入生成提示词。系统计算：
-
-```text
-score_floor = max(0.02, 第一名 rerank 分数 × 10%)
-```
-
-最多选择 4 个超过门槛的 chunk。这样做是为了：
+Evidence Gate 之前只构建一次最终证据集。单跳通过动态 floor 降噪、最多 4 个；
+多跳保留 Rerank Top 6，避免位于第 5/6 名的桥接证据提前消失。单跳过滤的目的
+是：
 
 - 避免小知识库把明显不相关的尾部候选一起送入模型；
 - 减少 token、延迟和外部数据发送量；
 - 降低无关文档中提示注入文本的暴露面；
 - 让引用与最终上下文一一对应。
 
-DeepSeek 收到的是用户问题和这些选中 chunk，而不是整个知识库。提示词明确要求把 source 内容视为不可信数据、只依据证据回答、每个实质性结论附 `[S1]` 等引用。
+多跳保留六个是一项有界的召回优先策略，不代表六个来源都可信。Gate 的来源
+多样性和灰区分类检查全部六个；传给 Gate 与生成模型的 rank、rerank score 只
+是查询相关性提示，不代表事实正确性、来源权威性、可信度或时效性。
+
+Gate 返回 `answer` 后不会再次运行另一套 Context Selection。DeepSeek 收到的
+就是 Gate 刚才审核的同一批 chunk，而不是整个知识库；citation chunk IDs 也
+来自同一个有序集合。提示词明确要求把 source 内容视为不可信数据、只依据证据回答、每个实质性结论附 `[S1]` 等引用。
 
 系统会清理超出有效范围的引用标记；若模型一个有效标记都没给，会追加可核查来源。若生成 API 失败，则退化为带 `[S1]` 的抽取式回答，并在 trace 中标记 `degraded=true`。
 
@@ -513,7 +525,7 @@ MCP 层需要新增的是工具描述、鉴权、上传资源语义、流式/轮
 
 ### 15.2 5 分钟版本
 
-系统有离线和在线两条流。离线由 worker 把原件变成带来源位置的 chunk、1024 维向量和 BM25 索引，并发布不可变版本。在线由 API 执行 dense + BM25 + RRF + reranker，Evidence Gate 决定单轮回答、二轮检索、澄清或拒答，最终最多选择 4 个 chunk 交给 DeepSeek。API、worker 和持久 volume 由 Compose 管理；本地 Qwen 模型在宿主 Model Runner，DeepSeek 在外部。
+系统有离线和在线两条流。离线由 worker 把原件变成带来源位置的 chunk、1024 维向量和 BM25 索引，并发布不可变版本。在线由 API 执行 dense + BM25 + RRF + reranker，随后构建单跳经 floor 后最多 4 个、多跳保留完整 Top 6 的 Evidence Set；Evidence Gate 审核该集合并决定单轮回答、二轮检索、澄清或拒答，放行后同一集合直接交给 DeepSeek。API、worker 和持久 volume 由 Compose 管理；本地 Qwen 模型在宿主 Model Runner，DeepSeek 在外部。
 
 ### 15.3 工程评审版本
 

@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     evidence_threshold: float = 0.52
     context_min_rerank_score: float = 0.02
     context_relative_score: float = 0.10
+    evidence_single_hop_limit: int = Field(default=4, ge=1, le=6)
+    evidence_multi_hop_limit: int = Field(default=6, ge=1, le=6)
 
     @property
     def database_path(self) -> Path:
@@ -70,6 +72,10 @@ class Settings(BaseSettings):
             raise ValueError("RAG_RERANK_ENDPOINT is required for HTTP reranking")
         if self.llm_enabled and (not self.llm_base_url or not self.llm_api_key):
             raise ValueError("LLM is enabled but its base URL or API key is missing")
+        if self.evidence_single_hop_limit > self.rerank_k:
+            raise ValueError("Single-hop evidence limit cannot exceed rerank_k")
+        if self.evidence_multi_hop_limit > self.rerank_k:
+            raise ValueError("Multi-hop evidence limit cannot exceed rerank_k")
         return self
 
 

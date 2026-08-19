@@ -60,12 +60,15 @@ flowchart TD
   Help -- no --> R1[Round 1: dense + BM25]
   R1 --> RRF[RRF fusion k=60]
   RRF --> RR[Qwen rerank]
-  RR --> Gate{Evidence gate}
-  Gate -- sufficient --> Answer[Grounded answer + citations]
+  RR --> ES1[Build evidence set\nsingle-hop floor ≤4 / multi-hop retain Top 6]
+  ES1 --> Gate{Evidence gate audits this set}
+  Gate -- sufficient --> Answer[Generate from the same set\n+ matching citations]
   Gate -- ambiguous --> Clarify[Ask for clarification]
   Gate -- weak --> Plan[Rewrite/decompose, max 4 queries]
   Plan --> R2[Round 2 retrieval]
-  R2 --> Gate2{Final evidence gate}
+  R2 --> Merge[Merge + deduplicate both rounds]
+  Merge --> ES2[Rebuild evidence set\nsingle-hop floor ≤4 / multi-hop retain Top 6]
+  ES2 --> Gate2{Final evidence gate audits this set}
   Gate2 -- sufficient --> Answer
   Gate2 -- weak --> Stop[Abstain: insufficient evidence]
 ```
@@ -76,15 +79,30 @@ single deterministic hybrid retrieval when its evidence clears the gate. Only
 weak or multi-facet evidence triggers the second round. Budgets are two rounds,
 four subqueries, and one final answer call.
 
-The evidence gate combines reranker relevance, lexical query coverage, and
- source diversity for multi-hop-looking questions. An enabled LLM may grade only
-the gray zone; deterministic rules remain the fallback and the trace records
-which method was used.
+After reranking Top 6, the system deterministically classifies the question as
+single-hop or multi-hop with `_looks_multihop`. It constructs one evidence set
+before the gate. Single-hop candidates must clear
+`max(0.02, top_rerank_score × 0.10)` and at most four are retained; Top 1 is the
+fallback if no candidate clears the floor. Multi-hop retains the complete
+reranker Top 6 without applying that floor. The selection policy and every
+discard are traced before gate evaluation.
 
-Before generation, context selection keeps at most four candidates that clear
-both an absolute rerank floor and 10% of the top rerank score. This prevents a
-small knowledge base from padding every answer with near-zero-score chunks and
-reduces prompt-injection exposure from irrelevant documents.
+The evidence gate audits only this set. It combines Top 1 reranker relevance
+with joint lexical query coverage over all selected chunks, and multi-hop source
+diversity is measured over the complete selected set. The optional gray-zone
+LLM classifier sees that same complete set. If the gate answers, the exact
+chunk IDs are passed directly to generation and citations—there is no second
+context-selection rule. If it retries, first- and second-round candidates are
+merged and deduplicated before the evidence set is rebuilt and audited again.
+Retrieval rank and reranker score are included in the gate and generation
+prompts as relevance hints, with an explicit warning that neither establishes
+factual correctness, source authority, trustworthiness, or recency.
+
+This is a deliberate recall/precision split: single-hop questions normally need
+one compact fact and benefit from tail-noise suppression, while a multi-hop
+bridge may appear at rank five or six. Keeping six is still a bounded context,
+not a claim that every reranked item is trustworthy; the gate checks the full
+set and generation must judge source content and corroboration.
 
 ## 4. Model and failure boundaries
 

@@ -478,6 +478,86 @@ def enrich_cached_report(report: dict[str, Any]) -> dict[str, Any]:
     return report
 
 
+def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    diagnoses = Counter(row["diagnosis"] for row in rows)
+    return {
+        "cases": len(rows),
+        "passed": sum(row["passed"] for row in rows),
+        "failed_or_exposed": sum(not row["passed"] for row in rows),
+        "pass_rate": round(sum(row["passed"] for row in rows) / len(rows), 6),
+        "mean_latency_ms": round(statistics.fmean(row["latency_ms"] for row in rows), 3),
+        "answer_content_correct": sum(row["answer_content_correct"] for row in rows),
+        "answer_content_accuracy": round(
+            sum(row["answer_content_correct"] for row in rows) / len(rows), 6
+        ),
+        "diagnosis_counts": dict(sorted(diagnoses.items())),
+    }
+
+
+def comparison_report(
+    before: dict[str, Any], after: dict[str, Any]
+) -> dict[str, Any]:
+    before_cases = {row["id"]: row for row in before.get("cases", [])}
+    after_cases = {row["id"]: row for row in after.get("cases", [])}
+    rows: list[dict[str, Any]] = []
+    for case_id in sorted(before_cases.keys() | after_cases.keys()):
+        old = before_cases.get(case_id, {})
+        new = after_cases.get(case_id, {})
+        rows.append(
+            {
+                "id": case_id,
+                "label": new.get("label", old.get("label")),
+                "before": {
+                    "route": old.get("route"),
+                    "passed": old.get("passed"),
+                    "answer_content_correct": old.get("answer_content_correct"),
+                    "diagnosis": old.get("diagnosis"),
+                    "latency_ms": old.get("latency_ms"),
+                    "run_id": old.get("run_id"),
+                },
+                "after": {
+                    "route": new.get("route"),
+                    "passed": new.get("passed"),
+                    "answer_content_correct": new.get("answer_content_correct"),
+                    "diagnosis": new.get("diagnosis"),
+                    "latency_ms": new.get("latency_ms"),
+                    "run_id": new.get("run_id"),
+                },
+            }
+        )
+    before_summary = before.get("summary", {})
+    after_summary = after.get("summary", {})
+    return {
+        "schema_version": "1.0",
+        "generated_at": datetime.now(UTC).isoformat(),
+        "before_generated_at": before.get("generated_at"),
+        "after_generated_at": after.get("generated_at"),
+        "before_summary": before_summary,
+        "after_summary": after_summary,
+        "delta": {
+            "passed": after_summary.get("passed", 0) - before_summary.get("passed", 0),
+            "pass_rate": round(
+                after_summary.get("pass_rate", 0.0)
+                - before_summary.get("pass_rate", 0.0),
+                6,
+            ),
+            "answer_content_correct": after_summary.get("answer_content_correct", 0)
+            - before_summary.get("answer_content_correct", 0),
+            "answer_content_accuracy": round(
+                after_summary.get("answer_content_accuracy", 0.0)
+                - before_summary.get("answer_content_accuracy", 0.0),
+                6,
+            ),
+            "mean_latency_ms": round(
+                after_summary.get("mean_latency_ms", 0.0)
+                - before_summary.get("mean_latency_ms", 0.0),
+                3,
+            ),
+        },
+        "cases": rows,
+    }
+
+
 async def create_lab(args: argparse.Namespace) -> dict[str, Any]:
     base_url = args.base_url.rstrip("/")
     documents = lab_documents()
@@ -512,6 +592,53 @@ async def create_lab(args: argparse.Namespace) -> dict[str, Any]:
                 )
                 current.raise_for_status()
                 report["knowledge_base"] = current.json()
+                if args.reevaluate_existing:
+                    before = json.loads(json.dumps(report))
+                    if args.snapshot_output:
+                        args.snapshot_output.parent.mkdir(parents=True, exist_ok=True)
+                        args.snapshot_output.write_text(
+                            json.dumps(before, ensure_ascii=False, indent=2),
+                            encoding="utf-8",
+                        )
+                    rows: list[dict[str, Any]] = []
+                    for case in cases:
+                        print(
+                            json.dumps(
+                                {
+                                    "stage": "failure_lab_reevaluation",
+                                    "case": case.id,
+                                    "label": case.label,
+                                },
+                                ensure_ascii=False,
+                            ),
+                            flush=True,
+                        )
+                        rows.append(
+                            await run_case(
+                                client,
+                                base_url,
+                                cached_kb_id,
+                                case,
+                                report["document_key_to_id"],
+                                report["document_states"],
+                            )
+                        )
+                    report["generated_at"] = datetime.now(UTC).isoformat()
+                    report["service_health"] = health.json()
+                    report["summary"] = summarize(rows)
+                    report["cases"] = rows
+                    args.output.write_text(
+                        json.dumps(report, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                    if args.comparison_output:
+                        args.comparison_output.parent.mkdir(parents=True, exist_ok=True)
+                        comparison = comparison_report(before, report)
+                        args.comparison_output.write_text(
+                            json.dumps(comparison, ensure_ascii=False, indent=2),
+                            encoding="utf-8",
+                        )
+                    return report
             args.output.write_text(
                 json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
             )
@@ -589,7 +716,6 @@ async def create_lab(args: argparse.Namespace) -> dict[str, Any]:
         current.raise_for_status()
         knowledge_base = current.json()
 
-    diagnoses = Counter(row["diagnosis"] for row in rows)
     report = {
         "schema_version": "1.0",
         "generated_at": datetime.now(UTC).isoformat(),
@@ -602,20 +728,7 @@ async def create_lab(args: argparse.Namespace) -> dict[str, Any]:
         "index_job_result": index_job["result"],
         "document_key_to_id": key_to_document_id,
         "document_states": document_states,
-        "summary": {
-            "cases": len(rows),
-            "passed": sum(row["passed"] for row in rows),
-            "failed_or_exposed": sum(not row["passed"] for row in rows),
-            "pass_rate": round(sum(row["passed"] for row in rows) / len(rows), 6),
-            "mean_latency_ms": round(statistics.fmean(row["latency_ms"] for row in rows), 3),
-            "answer_content_correct": sum(
-                row["answer_content_correct"] for row in rows
-            ),
-            "answer_content_accuracy": round(
-                sum(row["answer_content_correct"] for row in rows) / len(rows), 6
-            ),
-            "diagnosis_counts": dict(sorted(diagnoses.items())),
-        },
+        "summary": summarize(rows),
         "cases": rows,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -643,6 +756,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-url", default="http://127.0.0.1:8080")
     parser.add_argument("--name", default="粗糙知识库")
     parser.add_argument("--force-new", action="store_true")
+    parser.add_argument(
+        "--reevaluate-existing",
+        action="store_true",
+        help="Re-run all cases against the existing knowledge base instead of returning cached results.",
+    )
+    parser.add_argument(
+        "--snapshot-output",
+        type=Path,
+        help="Optional path for the cached report before an existing lab is re-evaluated.",
+    )
+    parser.add_argument(
+        "--comparison-output",
+        type=Path,
+        help="Optional path for a compact before/after comparison report.",
+    )
     parser.add_argument(
         "--output",
         type=Path,

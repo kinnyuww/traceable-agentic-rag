@@ -15,6 +15,13 @@ Initial public baseline.
 - Grounded answers, source citations, evidence gating and extractive fallback.
 - Full online traces across retrieval, fusion, reranking, context selection,
   routing and generation.
+- One pre-gate Evidence Set shared unchanged by sufficiency grading, generation
+  and citations: single-hop applies a dynamic floor and keeps up to four chunks;
+  multi-hop retains the complete reranker Top 6 without tail filtering.
+- Three documented product entry paths: complete Web UI, Web-managed knowledge
+  bases queried by an external Agent, and full REST-managed ingestion/query.
+- Public engineering decision report, failure-lab comparison artifacts and a
+  minimal GitHub CI workflow for Ruff and pytest.
 - Fixed-set evaluation API, public benchmark diagnostics and a Ragas adapter.
 - Docker Compose API/worker deployment and Apple Silicon model-runner profile.
 - Failure lab demonstrating parser, routing, citation and untrusted-context

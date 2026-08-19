@@ -25,8 +25,8 @@ in the prompt, or ignored by generation?”
 | Reranker | model cold start/503, truncation, domain mismatch, relevant item demotion | provider, retry count, latency, scores, fallback/error | pre/post-rerank delta | bounded retry; lexical fallback |
 | Query understanding | underspecified referent or missed facets | evidence-gate reason and missing facts | clarify/answerability cases | clarify or one rewrite/decomposition round |
 | Multi-hop retrieval | only one supporting source found | source diversity, subqueries, second-round candidates | all-evidence Recall@10 | max four subqueries, max two rounds |
-| Evidence gate | false accept causes hallucination; false reject hides valid answer | score inputs, method, confidence, decision and error | answerability accuracy; abstention cases | deterministic rule; optional gray-zone LLM |
-| Context assembly | duplicate/noisy evidence; useful item in the middle | selected chunk IDs and citation mapping | citation/evidence-set checks | maximum four selected chunks |
+| Evidence set + gate | false accept/reject; gate/generation set drift | question type, limit, floor, selected/discarded IDs, audited IDs, joint coverage and decision | answerability plus set-identity assertions | single-hop ≤4, multi-hop ≤6; one set shared by gate/generation |
+| Context assembly | duplicate/noisy evidence; useful item in the middle | selected chunk IDs and citation mapping | citation/evidence-set checks | no post-gate reselection |
 | Prompt injection | document tells model to ignore system instructions | untrusted-source delimiters and security prompt | adversarial document fixture | document text never grants instructions |
 | Generation | unsupported claim, invalid citation, provider/auth failure | model, usage, selected chunks, citation markers, degraded flag | faithfulness/citation checks when LLM is enabled | sanitize markers; cited extractive fallback |
 | External API | invalid key, 401, timeout, data-egress risk | server-side config state; sanitized error; no key in trace | connectivity preflight | disabled by default; 4xx is not retried |
@@ -43,13 +43,15 @@ Ordered stages are intentionally human-readable JSON:
 - `retrieval_round`: query; every dense, sparse, RRF and final candidate;
   chunk ID、document ID、文件名、页/章节位置和分数；counts；model
   providers；retry counts；stage and total latency；reranker degradation。
-- `evidence_gate`: answer/retry/clarify, reason, confidence, missing facts,
-  deterministic/LLM method and model error.
+- `context_selection`: before each gate, records single-hop/multi-hop, selection
+  policy, limit, the single-hop absolute/relative score floor (null for
+  multi-hop), Top-1 fallback and selected/discarded chunks.
+- `evidence_gate`: the exact audited chunk IDs, answer/retry/clarify, score
+  components (Top-1 rerank and joint set coverage), source diversity outcome,
+  confidence, missing facts, deterministic/LLM method and model error.
 - `query_plan`: second-round subqueries, reason, planner method and error.
-- `context_selection`: absolute/relative score floor and accepted/discarded
-  chunks, preventing weak tail candidates from automatically entering prompts.
-- `answer_generation`: selected chunks, provider, usage, valid citation markers
-  and degradation.
+- `answer_generation`: the same selected chunk IDs, citation chunk IDs,
+  provider, usage, valid citation markers and degradation.
 - `stop`: the exhausted budget and remaining evidence.
 - `run_failure`: stage, sanitized error class and recoverability.
 - `run_completed`: final route, rounds, citation count and latency.

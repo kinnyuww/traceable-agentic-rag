@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 from ragagent.config import Settings
 from ragagent.main import create_app
 from ragagent.models import ModelServiceError
+from ragagent.retrieval import RetrievalResult
+from ragagent.schemas import RetrievalHit, SourceLocation
 
 
 def make_client(tmp_path: Path, *, threshold: float = 0.52) -> TestClient:
@@ -57,6 +59,59 @@ def create_indexed_kb(client: TestClient) -> tuple[str, str]:
     return kb_id, index_id
 
 
+def retrieval_hit(
+    index: int,
+    score: float,
+    document_id: str,
+    text: str,
+) -> RetrievalHit:
+    return RetrievalHit(
+        chunk_id=f"stub_chunk_{index}",
+        text=text,
+        contextual_text=f"Document: {document_id}.md | Section: evidence-{index}",
+        source=SourceLocation(
+            document_id=document_id,
+            filename=f"{document_id}.md",
+            section=f"evidence-{index}",
+        ),
+        rrf_score=1.0 / (60 + index),
+        rerank_score=score,
+        query_coverage=0.0,
+    )
+
+
+class SequenceRetriever:
+    def __init__(self, first_hits: list[RetrievalHit], second_hits: list[RetrievalHit]):
+        self.first_hits = first_hits
+        self.second_hits = second_hits
+        self.calls = 0
+
+    async def retrieve(
+        self,
+        *,
+        knowledge_base_id: str,
+        query: str,
+        index_version_id: str | None = None,
+        top_k: int | None = None,
+    ) -> RetrievalResult:
+        hits = self.first_hits if self.calls == 0 else self.second_hits
+        self.calls += 1
+        return RetrievalResult(
+            index_version_id=index_version_id or "idx_stub",
+            query=query,
+            hits=hits[: top_k or len(hits)],
+            latency_ms=0.1,
+            diagnostics={
+                "dense_candidates": [],
+                "sparse_candidates": [],
+                "fused_candidates": [],
+                "reranked_candidates": [
+                    {"chunk_id": hit.chunk_id, "rerank": hit.rerank_score} for hit in hits
+                ],
+            },
+        )
+
+
 def test_upload_index_retrieve_query_and_trace(tmp_path: Path) -> None:
     with make_client(tmp_path) as client:
         kb_id, index_id = create_indexed_kb(client)
@@ -88,8 +143,8 @@ def test_upload_index_retrieve_query_and_trace(tmp_path: Path) -> None:
         assert stages == [
             "query_received",
             "retrieval_round",
-            "evidence_gate",
             "context_selection",
+            "evidence_gate",
             "answer_generation",
             "run_completed",
         ]
@@ -111,6 +166,16 @@ def test_upload_index_retrieve_query_and_trace(tmp_path: Path) -> None:
         )
         assert len(selection["payload"]["selected_chunks"]) == 1
         assert selection["payload"]["discarded_chunks"]
+        gate = next(event for event in run.json()["trace"] if event["stage"] == "evidence_gate")
+        generation = next(
+            event for event in run.json()["trace"] if event["stage"] == "answer_generation"
+        )
+        selected_ids = [item["chunk_id"] for item in selection["payload"]["selected_chunks"]]
+        citation_ids = [citation["chunk_id"] for citation in payload["citations"]]
+        assert gate["payload"]["audited_chunk_ids"] == selected_ids
+        assert generation["payload"]["selected_chunks"] == selected_ids
+        assert generation["payload"]["citation_chunk_ids"] == selected_ids
+        assert citation_ids == selected_ids
 
 
 def test_frontend_responses_disable_stale_asset_caching(tmp_path: Path) -> None:
@@ -138,6 +203,62 @@ def test_agent_stops_after_bounded_second_round(tmp_path: Path) -> None:
         run = client.get(payload["trace_url"]).json()
         assert any(event["stage"] == "query_plan" for event in run["trace"])
         assert any(event["stage"] == "stop" for event in run["trace"])
+        selections = [event for event in run["trace"] if event["stage"] == "context_selection"]
+        gates = [event for event in run["trace"] if event["stage"] == "evidence_gate"]
+        assert [event["payload"]["round"] for event in selections] == [1, 2]
+        assert [event["payload"]["round"] for event in gates] == [1, 2]
+        assert gates[-1]["payload"]["decision"] == "retry"
+
+
+def test_low_score_rank_five_is_shared_by_second_gate_generation_and_citations(
+    tmp_path: Path,
+) -> None:
+    with make_client(tmp_path, threshold=0.10) as client:
+        kb_id, _ = create_indexed_kb(client)
+        first_hits = [
+            retrieval_hit(0, 0.9, "doc_primary", "alpha evidence"),
+            retrieval_hit(1, 0.8, "doc_primary", "supporting evidence one"),
+            retrieval_hit(2, 0.7, "doc_primary", "supporting evidence two"),
+            retrieval_hit(3, 0.6, "doc_primary", "supporting evidence three"),
+        ]
+        rank_five = retrieval_hit(4, 0.01, "doc_second", "beta evidence")
+        retriever = SequenceRetriever(first_hits, [rank_five])
+        client.app.state.container.agent.retriever = retriever
+
+        response = client.post(
+            "/v1/query",
+            json={
+                "knowledge_base_id": kb_id,
+                "question": "alpha 以及 beta 分别是什么？",
+            },
+        )
+
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload["route"] == "iterative_rag"
+        assert payload["rounds"] == 2
+        run = client.get(payload["trace_url"]).json()
+        second_selection = [
+            event for event in run["trace"] if event["stage"] == "context_selection"
+        ][-1]
+        second_gate = [event for event in run["trace"] if event["stage"] == "evidence_gate"][-1]
+        generation = next(
+            event for event in run["trace"] if event["stage"] == "answer_generation"
+        )
+        selected_ids = [
+            item["chunk_id"] for item in second_selection["payload"]["selected_chunks"]
+        ]
+        citation_ids = [citation["chunk_id"] for citation in payload["citations"]]
+
+        assert selected_ids == [hit.chunk_id for hit in first_hits] + [rank_five.chunk_id]
+        assert selected_ids[4] == rank_five.chunk_id
+        assert second_selection["payload"]["question_type"] == "multi-hop"
+        assert second_selection["payload"]["selection_policy"] == "retain_rerank_top_k"
+        assert second_selection["payload"]["score_floor"] is None
+        assert second_gate["payload"]["audited_chunk_ids"] == selected_ids
+        assert generation["payload"]["selected_chunks"] == selected_ids
+        assert generation["payload"]["citation_chunk_ids"] == selected_ids
+        assert citation_ids == selected_ids
 
 
 def test_evaluation_records_runs_and_metrics(tmp_path: Path) -> None:

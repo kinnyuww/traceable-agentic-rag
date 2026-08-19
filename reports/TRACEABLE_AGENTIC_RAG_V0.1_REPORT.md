@@ -46,11 +46,17 @@ DeepSeek 生成端现已改为官方 `https://api.deepseek.com` 与 `deepseek-v4
 
 1. 只有问候和产品使用帮助可以走确定性直答；知识库事实问题绝不跳过检索。
 2. 第一轮执行 dense + BM25、RRF 融合和 rerank。
-3. 证据门检查最高相关性、查询词覆盖、多跳问题的来源多样性和含糊程度。
-4. 证据充分：单轮 RAG 回答；问题本身不明确：请求澄清。
-5. 证据弱或缺少要素：改写/分解为最多 4 个子查询，再检索一轮。
-6. 第二轮仍不足：解释性停止并返回“证据不足”，不会无界循环。
-7. 进入生成前，从候选中选择最多 4 个真正越过绝对和相对分数门槛的块，并留下接受/丢弃记录。
+3. Rerank Top 6 后先构建唯一 Evidence Set：单跳用 `score_floor = max(0.02, top_rerank × 10%)` 过滤并最多保留 4 个（无人越线时保留 Top 1）；多跳不使用 floor 删除尾部，完整保留 Top 6。
+4. Evidence Gate 只审核这批证据：保留 Top 1 rerank 相关性主信号，coverage 改为所有已选 chunk 合并后的联合覆盖率，多跳来源多样性检查整个集合；灰区 DeepSeek 分类也接收整个集合。
+5. 证据充分：同一批 chunk 不经二次筛选，直接用于生成和引用；问题本身不明确：请求澄清。
+6. 证据弱或缺少要素：改写/分解为最多 4 个子查询，再检索一轮；第一、二轮候选合并去重后重新构建 Evidence Set 并复审。
+7. 第二轮仍不足：解释性停止并返回“证据不足”，不会无界循环。
+
+新主路径可以压缩为：
+
+`Rerank Top 6 → 单跳 floor 后最多 4 / 多跳保留全部 6 → Evidence Gate → 同一集合直接生成`
+
+修改前，Gate 可依据 rerank Top 6 做判断，但放行后 `_select_context` 又独立执行最多 4 个的筛选；这允许第 5/6 名证据帮助多跳 Gate 放行，却随后从 DeepSeek prompt 中消失。修改后 `EvidenceSet` 成为 Gate 的类型化输入，`context_selection.selected_chunks`、`evidence_gate.audited_chunk_ids`、`answer_generation.selected_chunks` 和 response citation chunk IDs 在回答路径中保持同一有序集合。
 
 因此，“简单事实问题”是走一次确定性的传统 RAG 快速路径；“Agentic”发生在系统看过首轮证据之后，而不是由一个模型在检索前凭感觉猜问题难度。这与 LangGraph 示例中的 retrieve/grade/rewrite/generate 思路相近，但这里使用显式状态机和持久 trace，避免框架或自由循环掩盖边界。
 
@@ -79,7 +85,7 @@ Web 支持一次选择或拖拽多个 PDF、DOCX、Markdown、TXT；REST 使用 
 | 稀疏检索 | SQLite FTS5 BM25；中文字符与双字词补充 | 保存原始候选与 BM25 分数 |
 | 稠密检索 | Qwen3 1024 维，精确余弦 | 小型本地库优先正确性；后续换 HNSW/Qdrant |
 | 融合/重排 | RRF `k=60`；Qwen3 Reranker | reranker 失败降级词法重排 |
-| Agent | 证据门、澄清、最多一次重写/分解、停止 | 2 轮 / 4 子查询 / 1 次最终生成 |
+| Agent | 单一 Evidence Set、证据门、澄清、最多一次重写/分解、停止 | 单跳 4 / 多跳 6；2 轮 / 4 子查询 / 1 次最终生成 |
 | 生成 | 可选 DeepSeek；默认引用式抽取降级 | 文档视为不可信数据；引用 marker 校验 |
 | 持久化 | SQLite WAL、FTS5、content-addressed objects | 文档/索引/run/eval 均绑定稳定 ID |
 | 运行 | API + worker 容器；宿主 Docker Model Runner | macOS Metal 不强行透传普通 Linux 容器 |
@@ -118,9 +124,9 @@ RAG 的错误通常跨越多个阶段。仅保存最终答案无法回答“原�
 | Dense/BM25 | 跨语言、同义词、专名、分词各有盲点 | 保存两路完整有序候选，分别计算 Hit/Recall/MRR/nDCG |
 | RRF | 融合把 dense 命中的证据降走 | 保存 RRF 输入输出与 `k=60`，支持逐阶段归因 |
 | Reranker | 冷启动、503、截断、领域错配、反向降级 | 模型、分数、延迟、重试、degraded/error；失败走词法 fallback |
-| 证据门 | 错误回答或错误拒答 | decision/reason/confidence/missing facts/method |
+| Evidence Set / 证据门 | 错误回答、错误拒答或 Gate/生成集合漂移 | question type、selection policy、limit、单跳 floor（多跳为 null）、selected/discarded、audited IDs、联合 coverage、decision/reason/confidence/method |
 | 二轮 Agent | 改写跑偏、延迟爆炸、循环 | plan 与 subqueries 留痕；固定两轮后 `stop` |
-| Context assembly | 低分尾部污染 prompt、Lost in the Middle | `context_selection` 记录绝对/相对阈值及接受/丢弃块；最多 4 块 |
+| Context assembly | 单跳低分尾部污染、多跳桥接证据丢失、Lost in the Middle | Gate 前构建一次；单跳 floor 后最多 4、多跳完整 Top 6；放行后不再二次筛选 |
 | Prompt injection | 文档要求模型忽略系统指令 | 文档用 untrusted delimiter；对抗 fixture；弱相关攻击块不进上下文 |
 | Generation | 无证据陈述、引用伪造、API 失败 | selected chunks、provider、usage、合法 marker、degraded；抽取降级 |
 | 版本漂移 | 文档变了后无法重现 | run 绑定知识库、不可变 index version、模型和 chunk ID |
@@ -132,7 +138,7 @@ RAG 的错误通常跨越多个阶段。仅保存最终答案无法回答“原�
 
 **本机代理误路由。** `curl` 调本地模型成功，但继承 macOS 系统代理的 httpx 请求出现空 503/连接异常，最初很像模型冷启动。根因是 localhost/model-runner 请求被环境代理接管。修复为仅对本地主机关闭 `trust_env`，外部 API 仍保留系统代理，并增加本地代理绕过测试和瞬时 5xx/transport 的有界重试。这个例子说明“模型服务报错”可能其实是网络环境错误。
 
-**低分尾部进入上下文。** 首次浏览器真实问答虽然返回正确答案，但 trace 显示一个相关块得分约 0.999566，另外两个无关块只有 0.000133 和 0.000080，却仍因小知识库 Top-K 不足进入引用，其中一个含 prompt-injection 文本。修复后 context selection 采用 `max(绝对阈值 0.02, top_score × 10%)`，最多 4 块；最终浏览器验收只引用相关块，并明确记录 1 个 selected、2 个 discarded。这不是“清理 UI”，而是在生成之前切断弱证据和注入暴露面。
+**低分尾部进入上下文，以及 Gate/生成集合分叉。** 首次浏览器真实问答虽然返回正确答案，但 trace 显示一个相关块得分约 0.999566，另外两个无关块只有 0.000133 和 0.000080，却仍因小知识库 Top-K 不足进入引用，其中一个含 prompt-injection 文本。单跳动态门槛因此保留为 `max(绝对阈值 0.02, top_score × 10%)`。随后进一步发现旧流程在 Gate 之后才执行最多 4 块的 context selection：多跳 Gate 可能受第 5/6 名来源影响而放行，但该来源不会进入生成。现在筛选在 Gate 之前完成：单跳经 floor 后最多 4 个，多跳完整保留 Top 6；Gate、DeepSeek prompt 与 citation 共享完全相同的集合。多跳以有限的额外噪声换取桥接证据召回，并在提示词中明确 rank/score 只是相关性提示、不是事实可信度；trace 可直接做 ID 等值核对。
 
 **worker 误用 API 健康检查。** API、worker 和黑盒任务都能正常运行，但最终 `compose ps` 发现 worker 继承了镜像中的 HTTP `/v1/health` 探针；worker 本来不监听 8080，因而被错误标记 unhealthy。Compose 现为 worker 覆盖专用 SQLite `SELECT 1` 探针。这个故障不会改变问答结果，却会误导监控和自动恢复，说明功能测试与运维状态检查缺一不可。
 
@@ -173,6 +179,15 @@ RAG 的错误通常跨越多个阶段。仅保存最终答案无法回答“原�
 ### 7.5 RAGBench 与 Ragas 的位置
 
 [RAGBench](https://arxiv.org/abs/2407.11005) 提供跨 5 个领域、约 100k 样本和 TRACe 标签，更适合以后校准自动 evaluator，而不是本轮重新索引主基准。[Ragas](https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/) 是一套评测框架，能计算 faithfulness、context precision/recall、answer relevancy 等；它不是“RAG 的标准答案”，也不会自动把系统调好。v0.1 先保存问题、gold evidence、answerability、每阶段候选和 run ID，后续可接 Ragas/RAGChecker judge，但发布决策仍要看确定性 IR 指标、专家金标和独立/人工校准。
+
+本次 Evidence Set 改造后用 Ragas 0.4.3 和 DeepSeek 官方
+`deepseek-v4-flash` 复跑 QASPER、MultiHop-RAG 各 1 个代表样例：gold 文档
+evidence hit 100%，全部预期文档均被引用 100%，机械 gold 字符串命中 50%；
+context precision 0.75、context recall 0.50、faithfulness 0.65，零 metric
+error，问答平均 5.738 s。MultiHop-RAG 单题 precision/recall/faithfulness 约为
+1.00/1.00/0.80；QASPER 为 0.50/0/0.50，原因是无论文作用域的问题在 5 篇论文
+知识库中混入其他论文数据集，并漏答 Europarl。样本仅 2 条，且回答与 judge 使用
+同模型家族，只用于证明评测链路和定位问题，不用于宣称总体质量。
 
 ## 8. 指标怎么读
 
@@ -243,6 +258,40 @@ Dense 与 rerank Hit@1/Recall@10 都为 100%；BM25 Hit@1 50%、Recall 62.5%；R
 
 公开固定切片的最高 P95 为 4.318 s，低于本轮“检索+重排 ≤5 s”的目标。该批次运行时 DeepSeek 尚未启用，因此这些 P95 只覆盖检索、重排和抽取式 fallback；随后官方 DeepSeek 完整 Docker RAG 单问为 4.294 s、两并发最大 1.509 s，但非流式接口无法单独测量首 token ≤8 s。
 
+### 9.6 Evidence Set 改造后的同库回归
+
+这次用同一个 13 文档“粗糙知识库”、同一组 F01–F10 和同一诊断器复测。原始
+v0.1 DeepSeek 基线与新策略结果如下：
+
+| 指标 | 原始 v0.1 | 新 Evidence Set | 变化 |
+|---|---:|---:|---:|
+| 答案内容正确 | 9/10 | 9/10 | 0 |
+| 严格链路通过 | 4/10 | 4/10 | 0 |
+| 平均问答时延 | 3335.149 ms | 3293.258 ms | -41.891 ms（-1.3%，视为波动） |
+| 诊断分布 | 4 pass、3 不可信上下文暴露、1 Gate false accept、1 歧义 false accept、1 parse failure | 完全相同 | 0 |
+
+另做了一组关闭生成 LLM 的策略隔离前后测：旧的“单跳/多跳都用 floor”和新的
+“单跳 floor、多跳保留 Top 6”都得到答案内容 6/10、严格通过 2/10，逐题诊断
+完全不变。这组不能代表最终回答质量，但更能隔离 Evidence Set 规则本身。真实
+DeepSeek 服务最终仍以上表为准。
+
+10 条最终 DeepSeek run 中，所有回答路径均满足
+`evidence_gate.audited_chunk_ids == answer_generation.selected_chunks == citation_chunk_ids`。
+真实多跳样例的 trace 为 `selection_policy=retain_rerank_top_k`、`score_floor=null`、
+selected count 6；单跳样例则为 `dynamic_score_floor` 且最多 4 个。三个正常库抽查：
+
+- MultiHop-RAG 正确回答 Sam Bankman-Fried，保留并审核 6 个证据；
+- MIRACL-zh 正确回答“罗马”，使用 2 个单跳证据；
+- QASPER 只部分正确：召回 MultiUN，但因跨论文作用域污染漏答 Europarl。这一失败
+  发生在 single-hop 4 块路径，不是多跳尾部保留造成的。
+
+原始、新策略、隔离前后与 Ragas 的机器可读结果分别保存在
+`reports/results/failure-lab-original-baseline.json`、
+`reports/results/failure-lab-live.json`、
+`reports/results/failure-lab-multihop-retain-comparison.json`、
+`reports/results/failure-lab-deepseek-vs-extractive.json` 和
+`reports/results/live-ragas-evidence-set-v0.1.json`。
+
 ## 10. 故障策略与安全判断
 
 - HTTP 4xx（如 401）是配置/权限错误，立即失败，不重试。
@@ -295,13 +344,13 @@ python scripts/run_benchmarks.py --qasper ... --multihop ...
 python scripts/run_miracl_benchmark.py --topics ... --qrels ... --corpus-shard ...
 ```
 
-初版代码验证为 20 个 pytest 用例全通过；本轮前端交互、可访问性和静态资源缓存修复又增加 5 个测试，最终为 25 passed。覆盖四类 parser、损坏/空文件、重复上传、异步 job、建库、retrieve/query/trace/eval、两轮边界、contextualize 显式失败、embedding 硬失败、reranker/generation 降级、提示注入尾部过滤、localhost 代理绕过，以及弹窗退出/缓存/可访问性契约；ruff 通过。Docker 黑盒和真实浏览器问答另行通过。
+当前完整代码验证为 34 个 pytest 用例全通过。除四类 parser、损坏/空文件、重复上传、异步 job、建库、retrieve/query/trace/eval、两轮边界、contextualize 显式失败、embedding 硬失败、reranker/generation 降级、提示注入尾部过滤、localhost 代理绕过、弹窗退出/缓存/可访问性契约外，还覆盖单跳最多 4 及 floor 降噪、多跳无 floor 保留第 5/6 名证据、低分第 5 名进入第二轮 Gate/生成/引用、联合 coverage、灰区 LLM 接收 6 个证据、rank/score 可信度警示、第二轮合并去重，以及 Gate/生成/citation ID 集合一致性；ruff 通过。Docker 正式 DeepSeek 配置、粗糙库同题回归、三个示例库问答和 Ragas 代表样例另行通过。
 
 ## 14. 推荐下一迭代：Harness Engineering v0.2
 
 优先顺序应由本次证据决定：
 
-1. **用已验证的 DeepSeek 官方凭证补生成评测。** 建立 claim-level faithfulness、citation correctness、answer relevancy、拒答与中文/英文流式生成时延，不能只看字符串包含率。
+1. **扩展 DeepSeek 生成评测。** 当前只有 2 条 Ragas 代表样例；下一步扩大独立 judge/人工校准的 claim-level faithfulness、citation correctness、answer relevancy、拒答与中文/英文流式生成时延，不能只看字符串包含率或同模型 judge。
 2. **做失败归因器。** 用每阶段 gold 排名自动生成 failure taxonomy，特别关注 QASPER 的 fusion loss、rerank loss、跨论文指代和 gate false accept。
 3. **建立用户领域金标入口。** 专家提交 question、expected answer、gold evidence、answerable、标签；系统必须能从原文反查并辅助标注，而不是只收点赞/点踩。
 4. **离线候选实验。** 比较 chunk size/overlap、parent-child、dense safeguard、RRF 参数、rerank top-k、gate 阈值和 Contextual Retrieval；每次绑定 immutable config。
@@ -318,6 +367,7 @@ python scripts/run_miracl_benchmark.py --topics ... --qrels ... --corpus-shard .
 - [RAGChecker](https://github.com/amazon-science/RAGChecker)：retriever/generator 的 claim-level 诊断。
 - [Ragas metrics](https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/)：faithfulness、context precision/recall 等可插拔评测指标。
 - [Lost in the Middle](https://aclanthology.org/2024.tacl-1.9/)：长上下文中位置会影响证据使用，说明堆更多 chunk 不等于更好。
+- [RankRAG](https://arxiv.org/abs/2407.02485)：把上下文排序信号与生成结合；本项目只把 rank/score 作为相关性提示，不把它提升为事实可信度。
 - [OWASP Prompt Injection](https://genai.owasp.org/llmrisk/llm01-prompt-injection/) 与 [RAG Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/RAG_Security_Cheat_Sheet.html)：检索文档是不可信输入，必须隔离和监测。
 - [Docker Model Runner inference engines](https://docs.docker.com/ai/model-runner/inference-engines/) 与 [Models and Compose](https://docs.docker.com/ai/compose/models-and-compose/)：Apple Silicon llama.cpp/Metal 与 Compose 接入依据。
 

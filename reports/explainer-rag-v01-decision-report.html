@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Traceable Agentic RAG v0.1 工程复盘：SQLite 检索、chunk 策略、主流方法对照与下一步优先级。">
+  <title>Traceable Agentic RAG v0.1｜工程决策报告</title>
+  <style>
+    :root {
+      --paper: #f8f7f3;
+      --surface: #ffffff;
+      --ink: #17201f;
+      --muted: #5d6967;
+      --line: #dbe2df;
+      --accent: #086f68;
+      --accent-soft: #e6f2ef;
+      --warning: #9a5a13;
+      --warning-soft: #fff1dc;
+      --danger: #a33b32;
+      --danger-soft: #fdecea;
+      --code: #142523;
+      --shadow: 0 18px 48px rgba(24, 47, 43, 0.08);
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.72;
+    }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    button { font: inherit; }
+    code { font-family: var(--mono); font-size: .91em; }
+    .shell { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 { line-height: 1.18; letter-spacing: -.025em; }
+    h1 { max-width: 920px; margin: 0; font-size: clamp(2.2rem, 6vw, 5rem); }
+    h2 { margin: 0 0 14px; font-size: clamp(1.65rem, 3vw, 2.7rem); }
+    h3 { margin: 0 0 9px; font-size: 1.08rem; }
+    p { margin: 0 0 1em; }
+    .lede { max-width: 830px; color: var(--muted); font-size: clamp(1.03rem, 2vw, 1.28rem); }
+    .small { color: var(--muted); font-size: .88rem; }
+    .mono { font-family: var(--mono); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 700;
+    }
+    .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+    .hero { padding: 82px 0 54px; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 30px; }
+    .hero .lede { margin-top: 24px; }
+    .verdict {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 22px;
+      margin-top: 38px;
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--accent);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .verdict strong { display: block; margin-bottom: 8px; font-size: 1.22rem; }
+    .scoreboard { display: grid; gap: 10px; }
+    .score-row { display: grid; grid-template-columns: 110px 1fr 42px; align-items: center; gap: 10px; font-size: .83rem; }
+    .bar { height: 8px; overflow: hidden; border-radius: 10px; background: #e9eeec; }
+    .bar i { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+
+    .jump {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: rgba(248, 247, 243, .94);
+      backdrop-filter: blur(10px);
+    }
+    .jump-inner { display: flex; gap: 6px; padding: 9px 0; overflow-x: auto; scrollbar-width: none; }
+    .jump a { flex: 0 0 auto; padding: 7px 11px; border-radius: 8px; color: var(--muted); font-size: .81rem; font-weight: 700; text-decoration: none; }
+    .jump a:hover, .jump a:focus-visible { background: var(--accent-soft); color: var(--accent); outline: none; }
+
+    section { padding: 72px 0; border-bottom: 1px solid var(--line); }
+    .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 410px); gap: 38px; align-items: end; margin-bottom: 34px; }
+    .section-head p { margin: 0; color: var(--muted); }
+    .card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    .card p:last-child, .callout p:last-child { margin-bottom: 0; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .callout { padding: 18px 20px; border-radius: 14px; background: var(--accent-soft); }
+    .callout.warning { background: var(--warning-soft); }
+    .callout.danger { background: var(--danger-soft); }
+    .number { color: var(--accent); font: 800 1.65rem/1 var(--mono); }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(95px, 1fr));
+      gap: 8px;
+      margin-top: 24px;
+    }
+    .flow-step {
+      position: relative;
+      min-height: 118px;
+      padding: 14px 12px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface);
+    }
+    .flow-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      z-index: 2;
+      top: 44px;
+      right: -12px;
+      width: 16px;
+      color: var(--accent);
+      font-weight: 900;
+      text-align: center;
+    }
+    .flow-step b { display: block; margin: 8px 0 4px; font-size: .82rem; }
+    .flow-step small { display: block; color: var(--muted); font-size: .7rem; line-height: 1.45; }
+    .flow-step .n { color: var(--accent); font: 800 .72rem/1 var(--mono); }
+    .flow-step.sealed { border-color: var(--accent); background: var(--accent-soft); }
+
+    .lens-tabs, .priority-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .tab-button {
+      padding: 9px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 750;
+    }
+    .tab-button[aria-selected="true"] { border-color: var(--accent); background: var(--accent); color: white; }
+    .tab-button:focus-visible { outline: 3px solid rgba(8, 111, 104, .25); outline-offset: 2px; }
+    .lens-panel { min-height: 230px; }
+    .lens-visual { display: grid; grid-template-columns: .9fr 1.1fr; gap: 22px; align-items: center; }
+    .search-stack { display: grid; gap: 9px; }
+    .search-node { padding: 12px 14px; border: 1px solid var(--line); border-radius: 11px; background: #fbfcfb; color: var(--muted); transition: .18s ease; }
+    .search-node.active { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); transform: translateX(5px); }
+    .panel-copy h3 { font-size: 1.3rem; }
+    .panel-copy ul { margin: 8px 0 0; padding-left: 1.15em; }
+    .panel-copy li + li { margin-top: 4px; }
+    .equation { padding: 14px; border-radius: 11px; background: var(--code); color: #dff5ee; font: .84rem/1.7 var(--mono); overflow-x: auto; }
+
+    .fact-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .fact-table th, .fact-table td { padding: 13px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .fact-table th { color: var(--muted); font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; }
+    .fact-table tr:last-child td { border-bottom: 0; }
+    .status { font-weight: 800; white-space: nowrap; }
+    .status.good { color: var(--accent); }
+    .status.warn { color: var(--warning); }
+    .status.bad { color: var(--danger); }
+
+    .chunk-strip { position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 18px 0 9px; }
+    .chunk { min-height: 112px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+    .chunk b { display: block; color: var(--accent); font-family: var(--mono); font-size: .8rem; }
+    .chunk span { color: var(--muted); font-size: .78rem; }
+    .overlap {
+      position: absolute;
+      top: 72px;
+      left: 29%;
+      width: 12%;
+      padding: 3px 4px;
+      border-radius: 5px;
+      background: rgba(154, 90, 19, .18);
+      color: var(--warning);
+      font: 700 .65rem/1.2 var(--mono);
+      text-align: center;
+      pointer-events: none;
+    }
+    .overlap.second { left: 63.2%; }
+    details { padding: 14px 0; border-top: 1px solid var(--line); }
+    details:last-child { border-bottom: 1px solid var(--line); }
+    summary { cursor: pointer; font-weight: 800; }
+    details p, details ul { margin-bottom: 0; color: var(--muted); }
+
+    .research-map .card { padding-top: 18px; }
+    .project { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .project a { font-weight: 850; text-decoration: none; }
+    .project-tag { padding: 3px 7px; border-radius: 7px; background: var(--accent-soft); color: var(--accent); font-size: .68rem; font-weight: 800; }
+    .borrow { margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: .82rem; }
+
+    .priority-panel { min-height: 420px; }
+    .priority-list { display: grid; gap: 12px; }
+    .priority-item { display: grid; grid-template-columns: 42px minmax(0, 1fr) 116px; gap: 14px; align-items: start; padding: 16px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); }
+    .priority-index { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font: 800 .82rem/1 var(--mono); }
+    .priority-item h3 { margin: 0 0 5px; }
+    .priority-item p { margin: 0; color: var(--muted); font-size: .85rem; }
+    .impact { text-align: right; color: var(--muted); font-size: .73rem; }
+    .impact b { display: block; color: var(--ink); font-size: .82rem; }
+    .priority-note { margin-top: 16px; padding: 16px; border-left: 4px solid var(--accent); background: var(--accent-soft); }
+
+    .metric { padding: 20px; border-top: 4px solid var(--accent); }
+    .metric strong { display: block; margin: 8px 0; font: 800 2rem/1 var(--mono); }
+    .metric span { color: var(--muted); font-size: .8rem; }
+    .failure-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 16px; }
+    .failure-chain span { padding: 6px 9px; border-radius: 8px; background: var(--danger-soft); color: var(--danger); font-size: .75rem; font-weight: 750; }
+    .failure-chain i { color: var(--muted); font-style: normal; }
+
+    .hooks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; counter-reset: hook; }
+    .hook { position: relative; min-height: 145px; padding: 20px 20px 18px 58px; border: 1px dashed #a9b7b3; border-radius: 15px; }
+    .hook::before { counter-increment: hook; content: counter(hook); position: absolute; top: 20px; left: 18px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font: 800 .75rem/1 var(--mono); }
+    .hook h3 { margin-bottom: 7px; }
+    .hook p { color: var(--muted); font-size: .86rem; }
+
+    .source-list { columns: 2; column-gap: 36px; padding-left: 1.2em; }
+    .source-list li { break-inside: avoid; margin: 0 0 9px; color: var(--muted); font-size: .83rem; }
+    footer { padding: 42px 0 64px; color: var(--muted); font-size: .82rem; }
+    .print-note { display: none; }
+
+    @media (max-width: 980px) {
+      .flow { grid-template-columns: repeat(3, 1fr); }
+      .flow-step:not(:last-child)::after { display: none; }
+      .grid-3, .research-map { grid-template-columns: 1fr 1fr; }
+      .section-head, .verdict { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 700px) {
+      .shell { width: min(100% - 24px, 1160px); }
+      .hero { padding-top: 56px; }
+      section { padding: 54px 0; }
+      .grid-2, .grid-3, .research-map, .hooks, .lens-visual { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: 1fr 1fr; }
+      .chunk-strip { grid-template-columns: 1fr; }
+      .overlap { display: none; }
+      .priority-item { grid-template-columns: 38px minmax(0, 1fr); }
+      .impact { grid-column: 2; text-align: left; }
+      .source-list { columns: 1; }
+      .score-row { grid-template-columns: 95px 1fr 36px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { transition: none !important; }
+    }
+    @media print {
+      .jump, .lens-tabs, .priority-tabs { display: none; }
+      .shell { width: 100%; }
+      section { break-inside: avoid; padding: 28px 0; }
+      .print-note { display: block; }
+      .card { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="shell">
+      <div class="hero-meta">
+        <span class="pill">代码复核：2026-08-19</span>
+        <span class="pill">面向 v0.1 发布决策</span>
+        <span class="pill">本地实现 × 主流实践</span>
+      </div>
+      <p class="eyebrow">Traceable Agentic RAG</p>
+      <h1>先把证据地基做稳，<br>再谈自进化。</h1>
+      <p class="lede">这不是一份 RAG 入门，也不再解释 Docker 和 REST。它只回答四件事：现在的数据怎样流动、SQLite 到底怎样搜、chunk 到底怎样切、v0.1 发布前最值得修什么。</p>
+
+      <div class="verdict">
+        <div>
+          <strong>结论：架构方向正确，但首要短板已经不在 Agent。</strong>
+          <p>“Gate 审核的证据 = DeepSeek 生成的证据 = 引用来源”已经闭环。下一步收益最高的工作，是文档范围与元数据、表格/扫描件解析、中文句界，以及可诊断的检索阶段损失；不是立刻引入 GraphRAG、自动调参或更自由的 Agent。</p>
+        </div>
+        <div class="scoreboard" aria-label="当前工程成熟度判断">
+          <div class="score-row"><span>可追踪性</span><div class="bar"><i style="width:88%"></i></div><b>高</b></div>
+          <div class="score-row"><span>Agent 边界</span><div class="bar"><i style="width:82%"></i></div><b>高</b></div>
+          <div class="score-row"><span>证据加工</span><div class="bar"><i style="width:58%"></i></div><b>中</b></div>
+          <div class="score-row"><span>领域适配</span><div class="bar"><i style="width:38%"></i></div><b>低</b></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="jump" aria-label="报告章节导航">
+    <div class="shell jump-inner">
+      <a href="#mental-model">心智模型</a>
+      <a href="#sql-search">SQL 怎样搜</a>
+      <a href="#chunking">Chunk 怎样切</a>
+      <a href="#mainstream">主流方法</a>
+      <a href="#priorities">优化顺序</a>
+      <a href="#evaluation">已有证据</a>
+      <a href="#hooks">待决问题</a>
+    </div>
+  </nav>
+
+  <main>
+    <section id="mental-model">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">01 · Mental model</p>
+            <h2>一只被封存的证据袋</h2>
+          </div>
+          <p>离线阶段把原文加工成带位置的档案卡；在线阶段用“关键词镜头”和“语义镜头”并行找卡片。Gate 一旦放行，就把同一批卡片封存，生成器不能再换一批。</p>
+        </div>
+
+        <div class="flow" aria-label="在线问答九步数据流">
+          <div class="flow-step"><span class="n">01</span><b>理解问题</b><small>确定性 single-hop / multi-hop</small></div>
+          <div class="flow-step"><span class="n">02</span><b>查询计划</b><small>第 1 轮；必要时最多第 2 轮</small></div>
+          <div class="flow-step"><span class="n">03</span><b>双路召回</b><small>Dense 20 + BM25 20</small></div>
+          <div class="flow-step"><span class="n">04</span><b>RRF 融合</b><small>只融合名次，Top 12</small></div>
+          <div class="flow-step"><span class="n">05</span><b>Rerank</b><small>正文 + 本地上下文，Top 6</small></div>
+          <div class="flow-step sealed"><span class="n">06</span><b>证据集</b><small>单跳 floor 后 ≤4；多跳全 6</small></div>
+          <div class="flow-step sealed"><span class="n">07</span><b>Evidence Gate</b><small>只审这只证据袋</small></div>
+          <div class="flow-step sealed"><span class="n">08</span><b>DeepSeek</b><small>原样使用已审证据</small></div>
+          <div class="flow-step sealed"><span class="n">09</span><b>回答 + Trace</b><small>Gate / 生成 / 引用 ID 可核对</small></div>
+        </div>
+
+        <div class="grid-3" style="margin-top:18px">
+          <article class="card"><span class="number">2</span><h3>最多两轮检索</h3><p class="small">Agentic 体现在可观察的“检索—判断—改写—再检索”，不是无限自主循环。</p></article>
+          <article class="card"><span class="number">4 / 6</span><h3>证据预算</h3><p class="small">单跳最多 4；多跳保留 rerank Top 6，避免尾部第二来源被提前删除。</p></article>
+          <article class="card"><span class="number">1 = 1 = 1</span><h3>关键不变量</h3><p class="small">Gate 审核 IDs = 生成 IDs = API citation chunk IDs。</p></article>
+        </div>
+
+        <table class="fact-table" style="margin-top:22px">
+          <thead><tr><th>环节</th><th>修改前</th><th>现在</th><th>消除的问题</th></tr></thead>
+          <tbody>
+            <tr><td><b>证据选择</b></td><td>Gate 前后存在两套选择语义</td><td>Gate 前只构建一次 EvidenceSet</td><td>同一个 chunk 不会“审核时存在、生成时消失”</td></tr>
+            <tr><td><b>单跳</b></td><td>候选可能在后续上下文阶段再次变化</td><td><code>score_floor=max(0.02, top1×10%)</code>，最多 4 个</td><td>噪声过滤发生在审核之前</td></tr>
+            <tr><td><b>多跳</b></td><td>尾部有效证据可能被另一套规则删除</td><td>rerank Top 6 全部进入 Gate 与生成</td><td>第 5/6 名的第二来源不会被静默丢弃</td></tr>
+            <tr><td><b>重试</b></td><td>第二轮后仍可能重新筛一遍上下文</td><td>两轮合并去重，重建 EvidenceSet，再 Gate</td><td>两轮都遵守同一个证据契约</td></tr>
+            <tr><td><b>Trace</b></td><td>不同阶段 ID 难以严格核对</td><td>Gate / generation / citation ID 有自动化不变量测试</td><td>行为漂移可被回归测试直接阻止</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="sql-search">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">02 · SQLite & retrieval</p>
+            <h2>“SQL 搜索”其实只做了一半</h2>
+          </div>
+          <p>SQLite 负责存储和 FTS5/BM25 关键词召回；向量相似度并不是 SQL 算的，而是把当前索引版本的全部向量读进 Python/NumPy 后做精确余弦排序。</p>
+        </div>
+
+        <div class="lens-tabs" role="tablist" aria-label="选择检索镜头">
+          <button class="tab-button" role="tab" aria-selected="true" aria-controls="lens-panel" data-lens="sparse">关键词镜头 · BM25</button>
+          <button class="tab-button" role="tab" aria-selected="false" aria-controls="lens-panel" data-lens="dense">语义镜头 · Dense</button>
+          <button class="tab-button" role="tab" aria-selected="false" aria-controls="lens-panel" data-lens="hybrid">合并镜头 · Hybrid</button>
+        </div>
+
+        <div class="card lens-panel" id="lens-panel" role="tabpanel" aria-live="polite">
+          <div class="lens-visual">
+            <div class="search-stack" aria-hidden="true">
+              <div class="search-node active" data-node="fts">SQLite FTS5 / BM25 · Top 20</div>
+              <div class="search-node" data-node="dense">NumPy exact cosine · Top 20</div>
+              <div class="search-node" data-node="rrf">RRF(k=60) · Top 12</div>
+              <div class="search-node" data-node="rerank">Qwen reranker · Top 6</div>
+            </div>
+            <div class="panel-copy" id="lens-copy"></div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:18px">
+          <article class="card">
+            <h3>中文查询怎样进入 FTS5</h3>
+            <p>项目没有直接依赖 <code>unicode61</code> 给中文分词，而是在入库和查询前自己生成词项：</p>
+            <div class="equation">混合检索 → 混 · 合 · 检 · 索 · 混合 · 合检 · 检索<br>最多 80 个词项 → 每项加引号 → 用 OR 连接</div>
+            <p class="small" style="margin-top:12px">这样优先保证召回，但没有词性、停用词、实体、同义词和字段权重。中文单字会让“联合覆盖率”看起来比真实证据覆盖更乐观。</p>
+          </article>
+          <article class="card">
+            <h3>为什么 BM25 是升序</h3>
+            <p>FTS5 把传统 BM25 结果乘以 <code>-1</code>，所以数值越小、排名越好；当前 <code>ORDER BY bm25_score ASC</code> 是正确的，不是方向写反。</p>
+            <div class="equation">RRF(chunk) = Σ 1 / (60 + rank)<br>只看两路名次，不直接混合余弦分数与 BM25 分数</div>
+            <p class="small" style="margin-top:12px">RRF 是稳健 baseline，因为两类分数没有统一量纲。最终相关性仍由 reranker 重估。</p>
+          </article>
+        </div>
+
+        <table class="fact-table" style="margin-top:22px">
+          <thead><tr><th>实现事实</th><th>现在的好处</th><th>边界 / 风险</th><th>判断</th></tr></thead>
+          <tbody>
+            <tr><td>Dense 对当前版本全部 chunk 做精确余弦</td><td>小库上是正确性很强的参照，不受 ANN 近似误差影响</td><td>每次查询约为 <code>O(N×d)</code>，且要从 SQLite 解码所有向量</td><td class="status good">v0.1 保留</td></tr>
+            <tr><td>FTS 的 <code>text</code> 同时含文件名、章节、页码和正文</td><td>无需 LLM 就能给 chunk 增加一点局部语境</td><td>BM25 无法对标题/章节/正文分别加权，通用文件名可能制造噪声</td><td class="status warn">建议拆字段</td></tr>
+            <tr><td><code>index_version_id</code> 在 FTS5 中是 <code>UNINDEXED</code></td><td>结果仍会按不可变版本过滤</td><td>历史版本很多时可能扩大 FTS 扫描范围；需要用多版本压测确认</td><td class="status warn">先压测</td></tr>
+            <tr><td>SQL 使用 <code>bm25()</code> 排序</td><td>语义明确、结果正确</td><td>SQLite 官方说明 <code>ORDER BY rank</code> 在带 LIMIT 时可能更快</td><td class="status good">小优化</td></tr>
+            <tr><td>所有查询词用 OR</td><td>召回友好，少因一个词缺失而漏检</td><td>长问题容易用泛词召回；产品号、法规号等缺少精确通道</td><td class="status warn">加精确项加权</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout warning" style="margin-top:20px">
+          <strong>最重要的判断：</strong> 现在还不需要为了“主流”就换向量数据库。先定义真实规模门槛并压测；在小型本地知识库里，精确余弦是很好的质量基线。真正应先修的是 document scope、字段权重和解析缺口。
+        </div>
+      </div>
+    </section>
+
+    <section id="chunking">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">03 · Chunking</p>
+            <h2>结构优先、字符预算、确定性上下文</h2>
+          </div>
+          <p>当前 <code>structure_v1</code> 不是 LLM 语义切块，也不是 Anthropic Contextual Retrieval。它先尊重章节/页，再在章节内按约 1100 字符切割，重叠约 160 字符。</p>
+        </div>
+
+        <div class="card">
+          <div class="chunk-strip" aria-label="1100 字符目标和 160 字符重叠示意">
+            <div class="chunk"><b>Chunk 01 · 0—1100</b><span>Document + Section + Page<br>正文约 1100 字符</span></div>
+            <div class="chunk"><b>Chunk 02 · ≈940—2040</b><span>尽量在句末/空行结束<br>保留前块尾部语境</span></div>
+            <div class="chunk"><b>Chunk 03 · ≈1880—2980</b><span>永远不跨 section<br>位置写入 source metadata</span></div>
+            <span class="overlap">≈160</span><span class="overlap second">≈160</span>
+          </div>
+          <p class="small">注意：这里是字符数，不是 token 数。中文 1100 字符和英文 1100 字符对模型上下文的成本不同。</p>
+        </div>
+
+        <div class="grid-2" style="margin-top:18px">
+          <article class="card">
+            <h3>文档先怎样变成 section</h3>
+            <table class="fact-table">
+              <tbody>
+                <tr><td><b>Markdown</b></td><td><code>#</code> 到 <code>######</code> 标题分节</td><td class="status good">结构较好</td></tr>
+                <tr><td><b>DOCX</b></td><td>按 Heading 段落样式分节</td><td class="status bad">表格未解析</td></tr>
+                <tr><td><b>PDF</b></td><td>PyPDF 每页一个 section</td><td class="status bad">无 OCR / 版面理解</td></tr>
+                <tr><td><b>TXT</b></td><td>整篇一个 section，再按字符切</td><td class="status warn">无显式结构</td></tr>
+              </tbody>
+            </table>
+          </article>
+          <article class="card">
+            <h3>每块附带什么“上下文”</h3>
+            <div class="equation">Document: policy.docx<br>Section: 退款条件<br>Page: 4<br><br>＋ 原始 chunk 正文</div>
+            <p class="small" style="margin-top:12px">这段确定性元数据会进入 embedding、BM25 和 rerank。它可审计、零额外 API 成本；但不等同于为每块生成“该块在整篇文档中的含义摘要”。</p>
+          </article>
+        </div>
+
+        <div style="margin-top:22px">
+          <details open>
+            <summary>P0：中文句界存在一个真实缺口</summary>
+            <p>当前句界规则要求 <code>。！？.!?</code> 后还要有空白。典型中文是“第一句。第二句。”，标点后没有空格，因此常常无法在句末切开，只能依赖空行或 1100 字符硬切。应为中英文分别设计边界规则，并增加数字、小数、缩写的回归测试。</p>
+          </details>
+          <details>
+            <summary>P0：表格与扫描件是“原文存在，但检索永远找不到”的典型根因</summary>
+            <p>DOCX 表格未进入 section，扫描 PDF 没有 OCR。此时 reranker、Gate、查询改写都无法修复，因为证据从未进入索引。失败归因必须先区分 parse miss，再谈 retrieval miss。</p>
+          </details>
+          <details>
+            <summary>P1：为什么不立刻把 LLM 语义切块设为默认</summary>
+            <p>它会增加索引时间、API 成本、隐私面和不可重复性，也可能把生成式误读写入检索语料。更稳的顺序是：先修结构/表格/句界，再做 chunk 网格实验，最后把 Contextual Retrieval 作为不可变索引配置的候选实验。</p>
+          </details>
+          <details>
+            <summary>P1：parent-child / sentence-window 值得怎样试</summary>
+            <p>用小块提高召回；命中后再扩展父章节或邻句，把“扩展后的最终证据”统一交给 Gate。LlamaIndex 的 AutoMergingRetriever 就体现了“小节点命中、邻居补齐、满足条件后合并父节点”的思路。必须记录扩展前后 chunk ID 与 token 增量。</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section id="mainstream">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">04 · Mainstream map</p>
+            <h2>借它们的约束，不照搬它们的复杂度</h2>
+          </div>
+          <p>GitHub 热度只能证明使用广，不证明适合本项目。这里关注的是官方实现反复出现的工程共识，以及它们恰好怎样映射到你的失稳样例。</p>
+        </div>
+
+        <div class="grid-3 research-map">
+          <article class="card">
+            <div class="project"><a href="https://github.com/langchain-ai/langgraph">LangGraph</a><span class="project-tag">Agent state</span></div>
+            <p class="small">显式状态、可恢复执行、HITL；Self-RAG 路线是 retrieve → grade → rewrite → generate。</p>
+            <p class="borrow"><b>我们借：</b> 有预算的状态机和 trace。<br><b>不借：</b> 无限循环和每步都 LLM 化。</p>
+          </article>
+          <article class="card">
+            <div class="project"><a href="https://github.com/infiniflow/ragflow">RAGFlow</a><span class="project-tag">Evidence substrate</span></div>
+            <p class="small">强调深文档解析、混合召回、rerank、元数据过滤和 document scope；这正是当前项目的最大缺口。</p>
+            <p class="borrow"><b>我们借：</b> 范围过滤、字段权重、结构化解析。<br><b>不借：</b> v0.1 就复制完整平台。</p>
+          </article>
+          <article class="card">
+            <div class="project"><a href="https://github.com/run-llama/llama_index">LlamaIndex</a><span class="project-tag">Retrieval patterns</span></div>
+            <p class="small">Auto-merging、邻居补齐和多种 fusion 模式，适合作为可归因的离线实验。</p>
+            <p class="borrow"><b>我们借：</b> parent-child 候选实验。<br><b>不借：</b> 未经数据验证的默认复杂管线。</p>
+          </article>
+          <article class="card">
+            <div class="project"><a href="https://github.com/deepset-ai/haystack">Haystack</a><span class="project-tag">Modularity</span></div>
+            <p class="small">检索器、路由器、生成器和 Agent 状态均是可替换组件，契合“应用本体 + 可调用服务”的方向。</p>
+            <p class="borrow"><b>我们借：</b> 清晰契约与 provider adapter。<br><b>不借：</b> 为抽象而抽象。</p>
+          </article>
+          <article class="card">
+            <div class="project"><a href="https://github.com/amazon-science/RAGChecker">RAGChecker</a><span class="project-tag">Diagnostics</span></div>
+            <p class="small">把检索 claim recall/context precision 和生成 context utilization/noise sensitivity 分开，避免只看一个总分。</p>
+            <p class="borrow"><b>我们借：</b> 阶段级、claim 级失败归因。<br><b>不借：</b> 只为了分数堆评测器。</p>
+          </article>
+          <article class="card">
+            <div class="project"><a href="https://learn.microsoft.com/azure/architecture/ai-ml/guide/rag/rag-agentic">Microsoft 架构指南</a><span class="project-tag">Service boundary</span></div>
+            <p class="small">建议先把优化过的 hybrid/rerank/filter 管线封装成工具，并返回标题、日期、文档 ID、相关性分数。</p>
+            <p class="borrow"><b>我们借：</b> REST 核心服务 + 后续 MCP 适配。<br><b>不借：</b> 把事实判断交给相关性分数。</p>
+          </article>
+        </div>
+
+        <div class="callout" style="margin-top:20px">
+          <strong>共同信号：</strong> 成熟实现并不是“多调用几次大模型”，而是把 parser、metadata filter、hybrid retrieval、rerank、状态、评测拆开，使每个阶段可替换、可测、可归因。你现在的 EvidenceSet 不变量已经走在正确方向；下一个地基是 document scope 与 evidence semantics。
+        </div>
+      </div>
+    </section>
+
+    <section id="priorities">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">05 · Decision queue</p>
+            <h2>按“现在 / 实验 / 以后”排队</h2>
+          </div>
+          <p>按钮不是路线图装饰，而是在区分三类动作：可由已有失败直接证明、需要 A/B 验证、以及尚未达到触发条件。</p>
+        </div>
+
+        <div class="priority-tabs" role="tablist" aria-label="优化优先级">
+          <button class="tab-button" role="tab" aria-selected="true" aria-controls="priority-panel" data-priority="now">现在修 · P0</button>
+          <button class="tab-button" role="tab" aria-selected="false" aria-controls="priority-panel" data-priority="experiment">受控实验 · P1</button>
+          <button class="tab-button" role="tab" aria-selected="false" aria-controls="priority-panel" data-priority="later">达到门槛再做 · P2</button>
+        </div>
+        <div class="priority-panel" id="priority-panel" role="tabpanel" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="evaluation">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">06 · Existing evidence</p>
+            <h2>改 Gate 后没有性能塌陷，但也没有治好上游</h2>
+          </div>
+          <p>Failure Lab 新旧结果说明 EvidenceSet 改造是行为一致性修复，不是质量魔法。真正失败仍集中在文档范围、解析、冲突和提示注入。</p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card metric"><span>Failure Lab answer content</span><strong>9 / 10</strong><span>修改前后相同</span></article>
+          <article class="card metric"><span>Strict clean chain</span><strong>4 / 10</strong><span>修改前后相同；暴露真实脆弱点</span></article>
+          <article class="card metric"><span>平均延迟</span><strong>−1.3%</strong><span>3335 → 3293 ms；视为噪声</span></article>
+          <article class="card metric"><span>Ragas context precision</span><strong>0.75</strong><span>2 个 live 样例</span></article>
+          <article class="card metric"><span>Ragas context recall</span><strong>0.50</strong><span>提示“召回完整性”仍需单独看</span></article>
+          <article class="card metric"><span>Ragas faithfulness</span><strong>0.65</strong><span>小样本仅作流程烟雾测试</span></article>
+        </div>
+
+        <div class="grid-2" style="margin-top:20px">
+          <article class="card">
+            <h3>QASPER 真实例子说明了什么</h3>
+            <p class="small">“他们实验了哪些数据集？”在包含 5 篇论文的知识库中没有文档范围。系统跨论文找到 MultiUN，却漏 Europarl，并混入其他论文的数据集。根因更接近 <b>scope/metadata ambiguity</b>，不是“多跳 Top 6 还不够”。</p>
+          </article>
+          <article class="card">
+            <h3>下一版失败标签应该怎样走</h3>
+            <div class="failure-chain" aria-label="失败归因链">
+              <span>parse miss</span><i>→</i><span>chunk miss</span><i>→</i><span>recall miss</span><i>→</i><span>fusion loss</span><i>→</i><span>rerank loss</span><i>→</i><span>gate error</span><i>→</i><span>generation error</span>
+            </div>
+            <p class="small" style="margin-top:12px">只有先知道 gold evidence 在哪一层消失，后续 self-tuning 才不会错误调参。</p>
+          </article>
+        </div>
+
+        <div class="callout danger" style="margin-top:20px">
+          <strong>不要把相关性当可信度：</strong> rerank rank/score 可以作为 DeepSeek 的相关性提示，但无法证明来源权威、版本最新、文本没有提示注入，也无法解决两个来源彼此冲突。
+        </div>
+      </div>
+    </section>
+
+    <section id="hooks">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">07 · Hooks</p>
+            <h2>四个需要未来数据回答的问题</h2>
+          </div>
+          <p>这些不是现在应擅自定死的参数。它们会真正改变产品契约或成本，应成为下一阶段的实验输入。</p>
+        </div>
+
+        <div class="hooks">
+          <article class="hook"><h3>“引用”究竟表示什么？</h3><p>当前 API 为保持不变量，返回整个审核证据集。未来是否拆成 <code>evidence_sources</code>（Gate 全集）与 <code>claim_citations</code>（回答实际使用的子集）？</p></article>
+          <article class="hook"><h3>本地知识库的规模上限是多少？</h3><p>要到 1 万、10 万还是 100 万 chunk？先以 P95 延迟和内存压测定义 ANN 迁移门槛，而不是凭框架潮流换库。</p></article>
+          <article class="hook"><h3>领域元数据最小公约数是什么？</h3><p>通用产品至少可提供标题、文档类型、标签、发布日期、有效期、权威等级；但法律、医疗、工程各自还需要什么字段？</p></article>
+          <article class="hook"><h3>愿意为离线上下文付多少成本？</h3><p>Anthropic 式 chunk context 可能提高召回，也可能增加 API 成本、泄露面和生成噪声。应按领域、语言、chunk 配置做离线 A/B，而非默认开启。</p></article>
+        </div>
+
+        <div class="card" style="margin-top:24px">
+          <h3>这份报告刻意没有展开的内容</h3>
+          <p class="small">Docker、REST、Web UI、MCP 基础概念，以及传统 RAG 定义。它们仍在原有心智模型报告中；但对当前 v0.1 质量决策的边际价值较低。本报告把篇幅留给了 SQL、chunk、证据边界和具体失稳点。</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="sources">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">08 · Audit trail</p>
+            <h2>代码落点与外部依据</h2>
+          </div>
+          <p>主流实践只采纳官方仓库、官方文档和论文。社区 issue 只作为“实际使用者在争论什么”的信号，不作为事实权威。</p>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3>本地代码</h3>
+            <ul class="source-list" style="columns:1">
+              <li><a href="../src/ragagent/retrieval.py">retrieval.py</a>：exact dense、RRF、reranker 与逐层诊断</li>
+              <li><a href="../src/ragagent/repositories.py">repositories.py</a>：FTS5 查询、BM25 排序、向量加载</li>
+              <li><a href="../src/ragagent/db.py">db.py</a>：SQLite / FTS5 schema</li>
+              <li><a href="../src/ragagent/models.py">models.py</a>：中英文词项与 FTS 文本预处理</li>
+              <li><a href="../src/ragagent/chunking.py">chunking.py</a>：1100/160 与边界选择</li>
+              <li><a href="../src/ragagent/documents.py">documents.py</a>：Markdown / DOCX / PDF / TXT 解析</li>
+              <li><a href="../src/ragagent/agent.py">agent.py</a>：EvidenceSet、Gate、retry 与生成不变量</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>官方实现 / 论文</h3>
+            <ul class="source-list" style="columns:1">
+              <li><a href="https://www.sqlite.org/fts5.html">SQLite FTS5 官方文档</a>：unicode61、BM25、rank 与列权重</li>
+              <li><a href="https://github.com/infiniflow/ragflow/blob/main/docs/basics/rag.md">RAGFlow RAG 文档</a> 与 <a href="https://github.com/infiniflow/ragflow/blob/main/rag/nlp/search.py">搜索实现</a></li>
+              <li><a href="https://github.com/run-llama/llama_index/blob/main/llama-index-core/llama_index/core/retrievers/auto_merging_retriever.py">LlamaIndex AutoMergingRetriever</a></li>
+              <li><a href="https://langchain-ai.github.io/langgraph/tutorials/rag/langgraph_self_rag/">LangGraph Self-RAG 教程</a></li>
+              <li><a href="https://github.com/amazon-science/RAGChecker">Amazon RAGChecker</a></li>
+              <li><a href="https://www.anthropic.com/engineering/contextual-retrieval">Anthropic Contextual Retrieval</a></li>
+              <li><a href="https://arxiv.org/abs/2307.03172">Lost in the Middle</a>：更多上下文不总是更好</li>
+              <li><a href="https://arxiv.org/abs/2407.02485">RankRAG</a>：rank 与 generation 的研究方向</li>
+            </ul>
+          </article>
+        </div>
+
+        <p class="print-note small">交互面板在打印版中仅显示默认选项；请打开 HTML 查看全部内容。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">Traceable Agentic RAG v0.1 · Engineering decision report · 2026-08-19</div>
+  </footer>
+
+  <script>
+    const lensData = {
+      sparse: {
+        active: ["fts"],
+        title: "关键词镜头：SQLite FTS5 / BM25",
+        text: "擅长命中产品号、专有词和原文措辞。项目先把拉丁词、中文单字与相邻双字组装成查询，再用 OR 做 Top 20 召回。",
+        points: ["SQL 在这里真正参与排序", "BM25 数值越小越好", "弱点是中文语义、同义表达与长问题泛词"]
+      },
+      dense: {
+        active: ["dense"],
+        title: "语义镜头：NumPy 精确余弦",
+        text: "查询通过本地 embedding 服务转成向量；当前不可变索引版本的全部 chunk 向量从 SQLite 读出、归一化，再在 Python 中精确点积排序。",
+        points: ["不是 SQLite vector extension", "没有 ANN 近似损失", "代价随 chunk 数量线性增长"]
+      },
+      hybrid: {
+        active: ["fts", "dense", "rrf", "rerank"],
+        title: "合并镜头：RRF 后再 rerank",
+        text: "Dense Top 20 与 BM25 Top 20 用 RRF(k=60) 按名次合并成 Top 12；reranker 读取 contextual_text + text，最终给出 Top 6。",
+        points: ["RRF 避免混合两种不可比的原始分数", "reranker 失败会降级为词法重排并留痕", "任何阶段都可能把 gold evidence 压下去，所以必须保留逐层候选"]
+      }
+    };
+
+    const priorityData = {
+      now: {
+        note: "这些动作都有当前失败样例或代码事实支撑，适合成为 v0.1 发布收口或 v0.1.1 的第一批工作。",
+        items: [
+          ["01", "Document scope + metadata filter", "让请求可限制文档、类型、日期、权威和标签；trace 记录实际过滤条件。直接解决跨论文混答和版本冲突。", "质量：最高"],
+          ["02", "修中文句界并补回归测试", "中文标点后无需空白即可成为边界；同时保护小数、英文缩写和编号。", "成本：低"],
+          ["03", "补 DOCX 表格解析", "表格应作为结构块进入索引，保留行列标题和来源位置。它能消除已知 parse miss。", "证据：直接"],
+          ["04", "把 FTS 元数据与正文拆列", "title / section / body 分列，并用 BM25 column weights；避免文件名与正文同权。", "收益：中高"],
+          ["05", "增加逐阶段 gold-evidence loss 标签", "自动定位 parse、chunk、dense/BM25、RRF、rerank、Gate、generation 的第一处失败。", "为自调优铺路"],
+          ["06", "来源权威 / 时效 / 冲突信号", "相关性分数不能判断真伪；先用元数据和规则暴露冲突，再决定是否让 Gate 澄清或拒答。", "安全：高"]
+        ]
+      },
+      experiment: {
+        note: "每项都应绑定 immutable index config、固定测试集和回归门槛；没有显著收益就不进入默认路径。",
+        items: [
+          ["A", "Chunk 网格", "比较 650/900/1100/1400 字符与 80/160/240 overlap，按语言和文档类型分层报告。", "必须 A/B"],
+          ["B", "Parent-child / sentence-window", "小块召回、父段或邻句扩展；扩展完成后再构建唯一 EvidenceSet。", "风险：上下文膨胀"],
+          ["C", "离线 Contextual Retrieval", "为 chunk 生成文档级语境，但固定进索引版本；测召回、噪声、费用和误导率。", "风险：生成污染"],
+          ["D", "稀疏检索增强", "精确 ID/数字 boost、领域同义词、中文 tokenizer、短语通道；保留当前 char+bigram 作基线。", "领域相关"],
+          ["E", "多来源多样性 / MMR", "多跳时避免 Top 6 被一个文档占满，但不能强制多样化到丢失同文档多项证据。", "需分题型"],
+          ["F", "Claim coverage Gate", "从词项联合覆盖升级到问题子主张覆盖；优先只在灰区使用，以控制额外 LLM 成本。", "成本：中高"]
+        ]
+      },
+      later: {
+        note: "这些方向不是坏，而是目前缺少触发条件。提前引入会扩大排障面，让 v0.1 更难理解。",
+        items: [
+          ["L1", "ANN / 专用向量库", "只有 exact dense 的 P95 延迟或内存超过既定门槛时，再比较 HNSW、Qdrant、pgvector 等。", "触发：规模"],
+          ["L2", "GraphRAG", "只有数据确实以实体关系跨文档传播、且 hybrid RAG 反复失败时再引入。", "触发：关系型问题"],
+          ["L3", "在线自动调参", "先有稳定 failure labels、离线回放和审批边界，否则系统可能对偶然样例过拟合。", "触发：Harness"],
+          ["L4", "HITL self-tuning", "先把人的纠正结构化为问题、期望证据、答案与归因，而不是直接修改生产参数。", "触发：反馈数据"],
+          ["L5", "OCR / 多模态全栈", "在真实文档集证明扫描件、图表是主要失败来源后，再选择布局模型与资源预算。", "触发：数据占比"],
+          ["L6", "MCP 适配层", "REST 服务契约稳定后再映射成 MCP tools；核心检索与 EvidenceSet 不需重写。", "触发：集成需求"]
+        ]
+      }
+    };
+
+    function renderLens(key) {
+      const data = lensData[key];
+      document.querySelectorAll(".search-node").forEach((node) => {
+        node.classList.toggle("active", data.active.includes(node.dataset.node));
+      });
+      document.getElementById("lens-copy").innerHTML = `
+        <h3>${data.title}</h3>
+        <p>${data.text}</p>
+        <ul>${data.points.map((point) => `<li>${point}</li>`).join("")}</ul>`;
+    }
+
+    function renderPriority(key) {
+      const data = priorityData[key];
+      document.getElementById("priority-panel").innerHTML = `
+        <div class="priority-list">
+          ${data.items.map(([index, title, body, impact]) => `
+            <article class="priority-item">
+              <span class="priority-index">${index}</span>
+              <div><h3>${title}</h3><p>${body}</p></div>
+              <div class="impact"><b>${impact}</b></div>
+            </article>`).join("")}
+        </div>
+        <div class="priority-note">${data.note}</div>`;
+    }
+
+    function activateTabs(selector, callback, dataKey) {
+      const buttons = [...document.querySelectorAll(selector)];
+      buttons.forEach((button, index) => {
+        button.addEventListener("click", () => {
+          buttons.forEach((item) => item.setAttribute("aria-selected", "false"));
+          button.setAttribute("aria-selected", "true");
+          callback(button.dataset[dataKey]);
+        });
+        button.addEventListener("keydown", (event) => {
+          if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+          event.preventDefault();
+          const delta = event.key === "ArrowRight" ? 1 : -1;
+          const next = buttons[(index + delta + buttons.length) % buttons.length];
+          next.focus();
+          next.click();
+        });
+      });
+    }
+
+    renderLens("sparse");
+    renderPriority("now");
+    activateTabs("[data-lens]", renderLens, "lens");
+    activateTabs("[data-priority]", renderPriority, "priority");
+  </script>
+</body>
+</html>

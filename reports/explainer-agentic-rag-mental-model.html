@@ -725,7 +725,7 @@
           <article class="role card reveal" data-order="5">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h6M8 17h4"/></svg>
             <h3>有依据的生成</h3>
-            <p>DeepSeek 只拿到最多 4 个选中段落；它负责组织语言，不负责凭参数记忆发明事实。</p>
+            <p>DeepSeek 只拿到 Gate 审核过的最终证据集：单跳最多 4 个，多跳最多 6 个；它负责组织语言，不负责凭参数记忆发明事实。</p>
           </article>
           <article class="role card reveal" data-order="6">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
@@ -799,14 +799,15 @@
           </div>
           <div class="route-map" id="routeMap" aria-live="polite">
             <div class="route-node active" data-node="retrieve1"><b>第 1 轮检索</b><small>dense + BM25 + RRF + rerank</small></div>
-            <div class="route-node active" data-node="gate1"><b>Evidence Gate</b><small>相关度、覆盖、多跳来源</small></div>
+            <div class="route-node active" data-node="evidence"><b>构建 Evidence Set</b><small>单跳 floor ≤4 · 多跳保留 Top 6</small></div>
+            <div class="route-node active" data-node="gate1"><b>Evidence Gate</b><small>只审核已选集合</small></div>
             <div class="route-node skipped" data-node="plan"><b>规划新查询</b><small>最多 4 个子查询</small></div>
             <div class="route-node skipped" data-node="retrieve2"><b>第 2 轮检索</b><small>合并新旧候选</small></div>
-            <div class="route-node active" data-node="answer"><b>选证据并回答</b><small>最多 4 chunks + citations</small></div>
+            <div class="route-node active" data-node="answer"><b>同一集合直接回答</b><small>Gate IDs = generation IDs = citation IDs</small></div>
           </div>
           <div class="route-result" id="routeResult">
             <p><strong>Route：single_pass_rag</strong></p>
-            <small>第一轮证据越过门槛，直接选择上下文并生成。不是 DeepSeek 裸答。</small>
+            <small>第一轮 Evidence Set 越过门槛，原样进入生成。不是 DeepSeek 裸答。</small>
           </div>
         </div>
 
@@ -815,9 +816,9 @@
           <div class="pipe-item"><b>BM25 top 20</b><small>FTS5 关键词召回</small></div>
           <div class="pipe-item"><b>RRF top 12</b><small>k = 60，按名次融合</small></div>
           <div class="pipe-item"><b>Rerank top 6</b><small>Qwen3 Reranker 0.6B</small></div>
-          <div class="pipe-item"><b>Context ≤ 4</b><small>max(0.02, top × 10%)</small></div>
+          <div class="pipe-item"><b>Evidence ≤ 4 / 6</b><small>single-hop / multi-hop</small></div>
         </div>
-        <div class="formula reveal">evidence_score = 0.68 × top_rerank + 0.32 × best_query_coverage　|　base threshold = 0.52　|　max rounds = 2</div>
+        <div class="formula reveal">evidence_score = 0.68 × top_rerank + 0.32 × joint_set_query_coverage　|　single-hop floor = max(0.02, top × 10%)　|　multi-hop = retain Top 6　|　max rounds = 2</div>
       </div>
     </section>
 
@@ -993,15 +994,15 @@
 
     const scenarios = {
       simple: {
-        active: ['retrieve1', 'gate1', 'answer'],
-        result: '<p><strong>Route：single_pass_rag</strong></p><small>第一轮证据越过门槛，直接选择上下文并生成。不是 DeepSeek 裸答。</small>'
+        active: ['retrieve1', 'evidence', 'gate1', 'answer'],
+        result: '<p><strong>Route：single_pass_rag</strong></p><small>第一轮先选 Evidence Set，Gate 放行后同一集合直接生成。不是 DeepSeek 裸答。</small>'
       },
       weak: {
-        active: ['retrieve1', 'gate1', 'plan', 'retrieve2', 'answer'],
-        result: '<p><strong>Route：iterative_rag</strong></p><small>第一轮证据弱；Agent 观察缺失要素，规划最多 4 个查询，再检索一次并合并证据后回答。</small>'
+        active: ['retrieve1', 'evidence', 'gate1', 'plan', 'retrieve2', 'answer'],
+        result: '<p><strong>Route：iterative_rag</strong></p><small>第一轮证据弱；Agent 规划最多 4 个查询，再检索一次，合并去重后重建 Evidence Set，复审通过后原样回答。</small>'
       },
       failed: {
-        active: ['retrieve1', 'gate1', 'plan', 'retrieve2'],
+        active: ['retrieve1', 'evidence', 'gate1', 'plan', 'retrieve2'],
         result: '<p><strong>Route：insufficient_evidence</strong></p><small>第二轮仍未达到证据门槛。系统用尽固定预算后明确拒答，不无限循环，也不编造答案。</small>'
       }
     };
@@ -1044,7 +1045,7 @@
       },
       cloud: {
         title: '外部边界：DeepSeek 官方生成服务',
-        description: '只有 Evidence Gate 灰区判断、第二轮查询规划和最终生成可能调用 DeepSeek。最终生成只发送最多 4 个选中 chunk。',
+        description: '只有 Evidence Gate 灰区判断、第二轮查询规划和最终生成可能调用 DeepSeek。最终生成只发送 Gate 已审核的 Evidence Set：单跳最多 4 个，多跳最多 6 个。',
         boxes: [
           ['deepseek-v4-flash', '官方 OpenAI-compatible API', true],
           ['服务端密钥', '宿主机仓库外 secrets 文件注入', false],
